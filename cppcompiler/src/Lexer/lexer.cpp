@@ -72,6 +72,18 @@ std::vector<const char*> run(const char* code) {
 				out.push_back(make_token(partial.c_str()));
 				partial.erase();
 			} break;
+			case '#':
+				if (n == '#') {
+					current += 2;
+					while (*current != '\0' && *current != '\n')
+						current++;
+					break;
+				} else if (n == '*') {
+					current += 2;
+					while (*current != '\0' && !(current[0] == '#' && current[-1] == '*'))
+						current++;
+					break;
+				}
 			case '&':
 			case '+':
 			case '-':
