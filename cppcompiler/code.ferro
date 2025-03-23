@@ -1,2 +1,8 @@
-This was a triumph. %=<=>*= (lol)
-2. row.
+
+fn main() {
+    while (true) {
+        print("lol");
+    };
+} + {
+
+};
