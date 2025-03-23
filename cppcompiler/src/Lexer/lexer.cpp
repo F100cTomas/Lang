@@ -40,7 +40,7 @@ std::vector<const char*> run(const char* code) {
 	std::vector<const char*> out{};
 	std::string              partial{};
 	for (const char* current = code; *current != '\0'; current++) {
-		const char &c = current[0], n = current[1];
+		const char &c = current[0], &n = current[1];
 		switch (classify(c)) {
 		case CharType::special:
 			switch (c) {
@@ -50,7 +50,7 @@ std::vector<const char*> run(const char* code) {
 				partial.push_back(c);
 				current++;
 				while (*current != '\0' && *current != beginning) {
-					const char &c = current[0], n = current[1];
+					const char &c = current[0], &n = current[1];
 					if (c == '\\' && n == beginning) {
 						partial.push_back(c);
 						partial.push_back(n);
@@ -59,6 +59,9 @@ std::vector<const char*> run(const char* code) {
 					}
 					partial.push_back(c);
 					current++;
+
+
+
 				}
 				partial.push_back(beginning);
 				out.push_back(make_token(partial.c_str()));
