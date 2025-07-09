@@ -9,5 +9,5 @@ int main() {
 	std::stringstream str;
 	str << file.rdbuf();
 	std::vector<const char*> tokens = Lexer::run(str.str().c_str());
-	Parser::SymbolTable symbol_table = Parser::run(tokens);
+	Parser::run(tokens);
 }

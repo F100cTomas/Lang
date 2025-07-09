@@ -19,7 +19,7 @@ static uint64_t hashfn(const char* str) {
 	}
 	return hash;
 }
-MapMember token_map[256]{};
+MapMember token_map[1024]{};
 } // namespace
 namespace {
 enum class CharType : uint8_t { empty, alnum, special };
@@ -59,9 +59,6 @@ std::vector<const char*> run(const char* code) {
 					}
 					partial.push_back(c);
 					current++;
-
-
-
 				}
 				partial.push_back(beginning);
 				out.push_back(make_token(partial.c_str()));
@@ -139,7 +136,7 @@ std::vector<const char*> run(const char* code) {
 }
 const char* make_token(const char* name) {
 	uint64_t   hash    = hashfn(name);
-	MapMember* current = token_map + (hash % 256);
+	MapMember* current = token_map + (hash % 1024);
 	while (true) {
 		if (current->data == nullptr) {
 			size_t length = strlen(name);
@@ -156,7 +153,7 @@ const char* make_token(const char* name) {
 }
 void free_token(const char* token) {
 	uint64_t   hash    = hashfn(token);
-	MapMember* current = token_map + (hash % 256);
+	MapMember* current = token_map + (hash % 1024);
 	if (current->next == nullptr)
 		return;
 	if (strcmp(current->data, token) == 0) {
@@ -179,7 +176,7 @@ void free_token(const char* token) {
 	}
 }
 void free_all_tokens() {
-	for (size_t i = 0; i < 256; i++) {
+	for (size_t i = 0; i < 1024; i++) {
 		MapMember* const root = token_map + i;
 		while (root->next != nullptr) {
 			delete[] root->data;

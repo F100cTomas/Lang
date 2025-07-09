@@ -1,5 +1,5 @@
 CPP = clang++
-CPPFLAGS = -Wall -O3 -std=c++20 -Isrc $(shell llvm-config --cxxflags --ldflags --system-libs --libs core)
+CPPFLAGS = -Wall -O3 -Isrc $(shell llvm-config --cxxflags --ldflags --system-libs --libs core)
 
 all: ferro
 
