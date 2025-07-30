@@ -8,6 +8,7 @@ int main() {
 	std::ifstream     file{"code.ferro"};
 	std::stringstream str;
 	str << file.rdbuf();
-	std::vector<const char*> tokens = Lexer::run(str.str().c_str());
-	Parser::run(tokens);
+	std::vector<Lexer::Token> tokens = Lexer::run(str.str().c_str());
+	Parser::AST ast = Parser::run(tokens);
+	std::cout << ast << std::flush;
 }

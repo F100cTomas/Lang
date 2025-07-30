@@ -1,17 +1,16 @@
 #include "_lexer.hpp"
-#include <cctype>
+#include "../operators.hpp"
 #include <cstdint>
 #include <cstring>
 #include <string>
-#include <unordered_set>
 #include <vector>
 namespace Lexer {
 namespace {
-struct MapMember {
-	MapMember* next = 0;
-	char*      data = 0;
-};
-static uint64_t hashfn(const char* str) {
+/*
+ Lexer uses a hashmap to store the values of all tokens,
+ this means that a token are just pointers to strings.
+ */
+constexpr uint64_t hashfn(const char* str) {
 	uint64_t hash = 14695981039346656037U;
 	while (*str) {
 		hash ^= (uint8_t)*str++;
@@ -19,121 +18,11 @@ static uint64_t hashfn(const char* str) {
 	}
 	return hash;
 }
+struct MapMember {
+	MapMember* next = 0;
+	char*   data = 0;
+};
 MapMember token_map[1024]{};
-} // namespace
-namespace {
-enum class CharType : uint8_t { empty, alnum, special };
-CharType classify(char c) {
-	if ((uint8_t)c > 128)
-		return CharType::alnum;
-	if (c <= ' ')
-		return CharType::empty;
-	if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c == '_'))
-		return CharType::alnum;
-	return CharType::special;
-}
-std::unordered_set<std::string> two_ch_ops{
-    "!=", "%=", "&=", "*=", "+=", "-=", "->", "/=", "<<", "<=", "==", "=>", ">=", ">>", "^=", "|="};
-std::unordered_set<std::string> three_ch_ops{"<<=", "<=>", ">>="};
-} // namespace
-std::vector<const char*> run(const char* code) {
-	std::vector<const char*> out{};
-	std::string              partial{};
-	for (const char* current = code; *current != '\0'; current++) {
-		const char &c = current[0], &n = current[1];
-		switch (classify(c)) {
-		case CharType::special:
-			switch (c) {
-			case '\"':
-			case '\'': {
-				char beginning = c;
-				partial.push_back(c);
-				current++;
-				while (*current != '\0' && *current != beginning) {
-					const char &c = current[0], &n = current[1];
-					if (c == '\\' && n == beginning) {
-						partial.push_back(c);
-						partial.push_back(n);
-						current += 2;
-						continue;
-					}
-					partial.push_back(c);
-					current++;
-				}
-				partial.push_back(beginning);
-				out.push_back(make_token(partial.c_str()));
-				partial.erase();
-			} break;
-			case '$': {
-				while (classify(*current) != CharType::empty) {
-					partial.push_back(*current);
-					current++;
-				}
-				out.push_back(make_token(partial.c_str()));
-				partial.erase();
-			} break;
-			case '#':
-				if (n == '#') {
-					current += 2;
-					while (*current != '\0' && *current != '\n')
-						current++;
-					break;
-				} else if (n == '*') {
-					current += 2;
-					while (*current != '\0' && !(current[0] == '#' && current[-1] == '*'))
-						current++;
-					break;
-				}
-			case '&':
-			case '+':
-			case '-':
-			case '|':
-				if (c == n) {
-					while (*(current++) == c)
-						partial.push_back(c);
-					current--;
-					out.push_back(make_token(partial.c_str()));
-					partial.erase();
-					break;
-				}
-			default: {
-				partial.push_back(c);
-				partial.push_back(n);
-				if (n != '\0') {
-					partial.push_back(current[2]);
-					if (three_ch_ops.count(partial)) {
-						out.push_back(make_token(partial.c_str()));
-						partial.erase();
-						current += 2;
-						break;
-					}
-					partial.pop_back();
-				}
-				if (two_ch_ops.count(partial)) {
-					out.push_back(make_token(partial.c_str()));
-					partial.erase();
-					current++;
-					break;
-				}
-				partial.erase();
-				const char new_token[2]{c, '\0'};
-				out.push_back(make_token(new_token));
-			} break;
-			}
-			break;
-		case CharType::alnum: {
-			partial.push_back(c);
-			if (classify(n) != CharType::alnum) {
-				out.push_back(make_token(partial.c_str()));
-				partial.erase();
-			}
-		} break;
-		case CharType::empty:
-			break;
-		}
-	}
-	return out;
-}
 const char* make_token(const char* name) {
 	uint64_t   hash    = hashfn(name);
 	MapMember* current = token_map + (hash % 1024);
@@ -151,6 +40,129 @@ const char* make_token(const char* name) {
 		current = current->next;
 	}
 }
+enum class CharType : uint8_t { empty, alnum, special };
+CharType classify(char c) {
+	if ((uint8_t)c > 128)
+		return CharType::alnum;
+	if (c <= ' ')
+		return CharType::empty;
+	if ((c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c == '_'))
+		return CharType::alnum;
+	return CharType::special;
+}
+} // namespace
+// Token class
+Token::Token(const char* name) : _data(make_token(name)) {}
+// Main function of the lexer
+std::vector<Token> run(const char* code) {
+	std::vector<Token> out{};
+	std::string        partial{};
+	for (const char* ptr = code; *ptr != '\0'; ptr++) {
+		const char &c = ptr[0], &n = ptr[1];
+		switch (classify(c)) {
+		case CharType::alnum: {
+			// Add to partial, if last alnum in row => flush
+			partial.push_back(c);
+			if (classify(n) != CharType::alnum) {
+				out.emplace_back(partial.c_str());
+				partial.erase();
+			}
+		} break;
+		case CharType::empty:
+			// do nothing
+			break;
+		case CharType::special:
+			// different based on the character
+			switch (c) {
+				// strings
+			case '\"':
+			case '\'': {
+				char beginning = c;
+				partial.push_back(c);
+				ptr++;
+				while (*ptr != '\0' && *ptr != beginning) {
+					const char &c = ptr[0], &n = ptr[1];
+					if (c == '\\' && n == beginning) {
+						partial.push_back(c);
+						partial.push_back(n);
+						ptr += 2;
+						continue;
+					}
+					partial.push_back(c);
+					ptr++;
+				}
+				partial.push_back(beginning);
+				out.emplace_back(partial.c_str());
+				partial.erase();
+			} break;
+			// $-notation: continues with a string of any characters
+			case '$': {
+				while (classify(*ptr) != CharType::empty) {
+					partial.push_back(*ptr);
+					ptr++;
+				}
+				out.emplace_back(partial.c_str());
+				partial.erase();
+			} break;
+			// comments
+			case '#':
+				if (n == '#') {
+					ptr += 2;
+					while (*ptr != '\0' && *ptr != '\n')
+						ptr++;
+					break;
+				} else if (n == '*') {
+					ptr += 2;
+					while (*ptr != '\0' && !(ptr[0] == '#' && ptr[-1] == '*'))
+						ptr++;
+					break;
+				}
+			// combinable operators (example: & and &&)
+			// merged to be separated in preparser
+			case '&':
+			case '+':
+			case '-':
+			case '|':
+				if (c == n) {
+					while (*(ptr++) == c)
+						partial.push_back(c);
+					ptr--;
+					out.emplace_back(partial.c_str());
+					partial.erase();
+					break;
+				}
+			// tries to merge the next tree or two characters into an operator,
+			// failing that, it pushes the single character as a token
+			default: {
+				partial.push_back(c);
+				partial.push_back(n);
+				if (n != '\0') {
+					partial.push_back(ptr[2]);
+					if (Operators::is_operator(partial.c_str())) {
+						out.emplace_back(partial.c_str());
+						partial.erase();
+						ptr += 2;
+						break;
+					}
+					partial.pop_back();
+				}
+				if (Operators::is_operator(partial.c_str())) {
+					out.emplace_back(partial.c_str());
+					partial.erase();
+					ptr++;
+					break;
+				}
+				partial.erase();
+				const char new_token[2]{c, '\0'};
+				out.emplace_back(new_token);
+			} break;
+			}
+			break;
+		}
+	}
+	return out;
+}
+// deletes all tokens that share this value
 void free_token(const char* token) {
 	uint64_t   hash    = hashfn(token);
 	MapMember* current = token_map + (hash % 1024);
@@ -175,6 +187,7 @@ void free_token(const char* token) {
 		current = current->next;
 	}
 }
+// deletes all tokens
 void free_all_tokens() {
 	for (size_t i = 0; i < 1024; i++) {
 		MapMember* const root = token_map + i;
