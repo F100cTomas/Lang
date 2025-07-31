@@ -65,24 +65,27 @@ def to_rpn(tokens):
     return out
 
 # continuously test until a mismatch
-while True:
-    expr = gen_expr()
-    # write the test input
-    with open('code.ferro','w') as f:
-        f.write(expr + ' ;')
+try:
+	while True:
+			expr = gen_expr()
+			# write the test input
+			with open('code.ferro','w') as f:
+					f.write(expr + ' ;')
 
-    # run ferro and split its RPN
-    proc = subprocess.run(['./ferro'], capture_output=True, text=True)
-    got = proc.stdout.strip().split()
+			# run ferro and split its RPN
+			proc = subprocess.run(['./ferro'], capture_output=True, text=True)
+			got = proc.stdout.strip().split()
 
-    # generate expected RPN
-    want = to_rpn(expr.split())
+			# generate expected RPN
+			want = to_rpn(expr.split())
 
-    if got != want:
-        print("ERR")
-        print("expr:  ", expr)
-        print("expect:", ' '.join(want))
-        print("got:   ", ' '.join(got))
-        break
-    else:
-        print("OK:", expr, "→", ' '.join(got))
+			if got != want:
+					print("ERR")
+					print("expr:  ", expr)
+					print("expect:", ' '.join(want))
+					print("got:   ", ' '.join(got))
+					break
+			else:
+					print("OK:", expr, "→", ' '.join(got))
+except KeyboardInterrupt:
+	...

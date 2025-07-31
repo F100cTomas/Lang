@@ -55,4 +55,14 @@ namespace Operators {
 	constexpr bool is_operator(const Lexer::Token& token) {
 		return infix_operator_precedence(token).has_value() || prefix_operator_precedence(token).has_value() || postfix_operator_precedence(token).has_value();
 	}
+	constexpr bool is_keyword(const Lexer::Token& token) {
+		switch (hashfn(token)) {
+			case hashfn("{"):
+			case hashfn("if"):
+			case hashfn("fn"):
+				return true;
+			default:
+				return false;
+		}
+	}
 }

@@ -5,6 +5,33 @@
 #include <variant>
 #include <vector>
 namespace Parser {
+ASTNode ScopeData::parse_keyword() const {
+	Operation op{"{"};
+	op._args.reserve(op._args.size() + 1);
+	for (const std::vector<ParsingNode>& node : _statements)
+		op._args.emplace_back(parse(node.data(), node.data() + node.size()));
+	op._args.emplace_back(parse(_expression.data(), _expression.data() + _expression.size()));
+	return ASTNode(std::move(op));
+}
+ASTNode IfData::parse_keyword() const {
+	Operation op{"if"};
+	op._args.reserve(3);
+	op._args.emplace_back(parse(_cond.data(), _cond.data() + _cond.size()));
+	op._args.emplace_back(parse(_then.data(), _then.data() + _then.size()));
+	op._args.emplace_back(parse(_else.data(), _else.data() + _else.size()));
+	return ASTNode(std::move(op));
+}
+ASTNode KeywordData::parse_keyword() const {
+	if (std::holds_alternative<ScopeData>(_data))
+		return std::get<ScopeData>(_data).parse_keyword();
+	if (std::holds_alternative<IfData>(_data))
+		return std::get<IfData>(_data).parse_keyword();
+	if (std::holds_alternative<FnData>(_data))
+		ERROR("fn keyword not implemented");
+	if (_data.valueless_by_exception())
+		ERROR("Invalid state");
+	ERROR("Not implemented");
+}
 std::optional<uint32_t> ParsingNode::precedence() const {
 	switch (_op_type) {
 		case Operators::Type::prefix:
@@ -19,14 +46,46 @@ std::optional<uint32_t> ParsingNode::precedence() const {
 	}
 	return {};
 }
+std::ostream& operator<<(std::ostream& stream, const ParsingNode& node) {
+	using Operators::Type;
+	switch (node._op_type) {
+		case Type::infix:
+			stream << "\x1b[32m";
+			break;
+		case Type::prefix:
+			stream << "\x1b[33m";
+			break;
+		case Type::postfix:
+			stream << "\x1b[35m";
+			break;
+		case Type::none:
+			stream << "\x1b[31m";
+		break;
+		case Type::keyword:
+			if (node._keyword_data == nullptr)
+				stream << "\x1b[36m";
+			else
+				stream << "\x1b[34m";
+		break;
+	}
+	stream << node._token.get() << "\x1b[0m";
+	return stream;
+}
 std::ostream& operator<<(std::ostream& stream, const Value& val) {
 	stream << static_cast<int64_t>(val._value);
 	return stream;
 }
 std::ostream& operator<<(std::ostream& stream, const Operation& op) {
+	if (op._operator == "{") {
+		stream << "{ ";
+		for (size_t i = 0; i < op._args.size() - 1; i++)
+			stream << op._args[i] << " ; ";
+		stream << op._args.back() << " }";
+		return stream;
+	}
 	for (const ASTNode& arg : op._args)
 		stream << arg << ' ';
-	if (op._args.size() == 1)
+	if (op._args.size() == 1 && (op._operator == "+" || op._operator == "-" ))
 		stream << 'u';
 	stream << (op._operator == "" ? "()" : op._operator.get());
 	return stream;
@@ -53,13 +112,20 @@ std::ostream& operator<<(std::ostream& stream, const AST& ast) {
 		stream << root << '\n';
 	return stream;
 }
-ASTNode AST::parse(const ParsingNode* begin, const ParsingNode* end) const {
+ASTNode parse(const ParsingNode* begin, const ParsingNode* end) {
 	using Operators::Type;
 	if (begin >= end) {
 		return ASTNode(Value::integer(0));
 	}
 	if (begin == end - 1) {
-		return ASTNode(Value::integer(atoi(begin->_token)));;
+		if (begin->_op_type == Type::none)
+			return ASTNode(Value::integer(atoi(begin->_token)));;
+		if (begin->_op_type == Type::keyword) {
+			if (begin->_keyword_data == nullptr)
+				ERROR("Unexpected nullptr");
+			return begin->_keyword_data->parse_keyword();
+		}
+		ERROR("Syntax Error");
 	}
 	const ParsingNode* max   = begin;
 	size_t             layer = 0;
@@ -75,14 +141,15 @@ ASTNode AST::parse(const ParsingNode* begin, const ParsingNode* end) const {
 				layer--;
 			continue;
 		}
-		const bool is_max_invalid{max->_op_type == Type::none || (max->_op_type == Type::prefix && max != begin) || (max->_op_type == Type::postfix && max != end - 1)};
+		const bool is_max_invalid{max->_op_type == Type::none || max->_op_type == Type::keyword || (max->_op_type == Type::prefix && max != begin) || (max->_op_type == Type::postfix && max != end - 1)};
 		const bool is_current_valid{current->_op_type == Type::infix || (current->_op_type == Type::prefix && current == begin) || (current->_op_type == Type::postfix && current == end - 1)};
 		const bool is_current_better{current->precedence().value_or(0) > max->precedence().value_or(0) || (current->precedence().value_or(0) == max->precedence().value_or(0) && current->precedence().value_or(0) % 2 == 1)};
 		if (layer == 0 && (is_max_invalid || (is_current_valid && is_current_better)))
 			max = current;
 	}
-	if (layer != 0)
+	if (layer != 0) {
 		ERROR("Inconsistent ( )");
+	}
 	if (max == begin && max->_token == "(") {
 		// verify braces match
 		layer = 1;
@@ -112,7 +179,13 @@ AST run(const std::vector<Lexer::Token>& code) {
 		if (line.back() != ";")
 			ERROR("Missing semicolon");
 		line.pop_back();
-		ast.add_statement(run_preparser(line));
+		std::vector<ParsingNode> preparsed = run_preparser(line.data(), line.data() + line.size());
+		/*
+		for (const ParsingNode& node : preparsed)
+			std::cout << node;
+		std::cout << '\n';
+		*/
+		ast.add_statement(preparsed);
 	}
 	return ast;
 }

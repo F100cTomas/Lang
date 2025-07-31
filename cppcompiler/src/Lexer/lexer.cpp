@@ -65,7 +65,7 @@ std::vector<Token> run(const char* code) {
 			partial.push_back(c);
 			if (classify(n) != CharType::alnum) {
 				out.emplace_back(partial.c_str());
-				partial.erase();
+				partial.clear();
 			}
 		} break;
 		case CharType::empty:
@@ -93,7 +93,7 @@ std::vector<Token> run(const char* code) {
 				}
 				partial.push_back(beginning);
 				out.emplace_back(partial.c_str());
-				partial.erase();
+				partial.clear();
 			} break;
 			// $-notation: continues with a string of any characters
 			case '$': {
@@ -102,7 +102,7 @@ std::vector<Token> run(const char* code) {
 					ptr++;
 				}
 				out.emplace_back(partial.c_str());
-				partial.erase();
+				partial.clear();
 			} break;
 			// comments
 			case '#':
@@ -117,20 +117,22 @@ std::vector<Token> run(const char* code) {
 						ptr++;
 					break;
 				}
-			// combinable operators (example: & and &&)
-			// merged to be separated in preparser
-			case '&':
+			// combinable operators (example: +() and ++())
+			// merged to be separated in preparser (TODO)
+			/*
 			case '+':
 			case '-':
-			case '|':
 				if (c == n) {
-					while (*(ptr++) == c)
+					while (*ptr == c) {
 						partial.push_back(c);
+						ptr++;
+					}
 					ptr--;
 					out.emplace_back(partial.c_str());
-					partial.erase();
+					partial.clear();
 					break;
 				}
+			*/
 			// tries to merge the next tree or two characters into an operator,
 			// failing that, it pushes the single character as a token
 			default: {
@@ -140,7 +142,7 @@ std::vector<Token> run(const char* code) {
 					partial.push_back(ptr[2]);
 					if (Operators::is_operator(partial.c_str())) {
 						out.emplace_back(partial.c_str());
-						partial.erase();
+						partial.clear();
 						ptr += 2;
 						break;
 					}
@@ -148,11 +150,11 @@ std::vector<Token> run(const char* code) {
 				}
 				if (Operators::is_operator(partial.c_str())) {
 					out.emplace_back(partial.c_str());
-					partial.erase();
+					partial.clear();
 					ptr++;
 					break;
 				}
-				partial.erase();
+				partial.clear();
 				const char new_token[2]{c, '\0'};
 				out.emplace_back(new_token);
 			} break;
