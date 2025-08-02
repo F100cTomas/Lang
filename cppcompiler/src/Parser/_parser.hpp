@@ -1,47 +1,51 @@
 #pragma once
 #include "../Lexer/_lexer.hpp"
-#include "../operators.hpp"
+#include "../builtins.hpp"
 #include <iostream>
 #include <vector>
 #include <optional>
 #include <variant>
-#include <tuple>
 
 namespace Parser {
 struct ParsingNode;
 class ASTNode;
-struct ScopeData {
-	std::vector<std::vector<ParsingNode>> _statements{};
-	std::vector<ParsingNode> _expression{};
-public:
-	inline ScopeData() {}
-	inline ScopeData(ScopeData&& scope_data) : _statements(std::move(scope_data._statements)), _expression(std::move(scope_data._expression)) {}
-public:
-	ASTNode parse_keyword() const;
-};
-struct IfData {
-	std::vector<ParsingNode> _cond{};
-	std::vector<ParsingNode> _then{};
-	std::vector<ParsingNode> _else{};
-public:
-	inline IfData() {}
-	inline IfData(IfData&& if_data) : _cond(std::move(if_data._cond)), _then(std::move(if_data._then)), _else(std::move(if_data._else)) {}
-public:
-	ASTNode parse_keyword() const;
-};
-struct FnData {};
 class KeywordData {
 public:
-	std::variant<ScopeData, IfData, FnData> _data;
-private:
-	inline KeywordData(ScopeData&& scope_data) : _data(std::move(scope_data)) {}
-	inline KeywordData(IfData&& if_data) : _data(std::move(if_data)) {}
-	inline KeywordData(FnData&& fn_data) : _data(std::move(fn_data)) {}
+	inline virtual ~KeywordData() {};
+	virtual ASTNode parse_keyword() const = 0;
+};
+class ParenData : public KeywordData {
+	std::vector<ParsingNode> _expression;
 public:
-	static std::tuple<KeywordData*, size_t> scope(const Lexer::Token* begin, const Lexer::Token* end);
-	static std::tuple<KeywordData*, size_t> if_keyword(const Lexer::Token* begin, const Lexer::Token* end);
+	ParenData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_reserved);
+	inline ~ParenData() override {}
+	ASTNode parse_keyword() const override;
+};
+class ScopeData : public KeywordData {
+	std::vector<std::vector<ParsingNode>> _statements;
+	std::vector<ParsingNode> _expression;
 public:
-	ASTNode parse_keyword() const;
+	ScopeData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_reserved);
+	inline ~ScopeData() override {}
+	ASTNode parse_keyword() const override;
+};
+class IfData : public KeywordData {
+	std::vector<ParsingNode> _cond;
+	std::vector<ParsingNode> _then;
+	std::vector<ParsingNode> _else;
+public:
+	IfData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_reserved);
+	inline ~IfData() override {}
+	ASTNode parse_keyword() const override;
+};
+class FnData : public KeywordData {
+	Lexer::Token _name{nullptr};
+	std::vector<Lexer::Token> _args;
+	std::vector<ParsingNode> _body;
+public:
+	FnData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_reserved);
+	inline ~FnData() override {}
+	ASTNode parse_keyword() const override;
 };
 struct ParsingNode {
 	Lexer::Token    _token{nullptr};
@@ -57,10 +61,6 @@ public:
 	std::optional<uint32_t> precedence() const;
 	friend std::ostream& operator<<(std::ostream& stream, const ParsingNode& node);
 };
-// Keeps the semicolon at the end around
-std::vector<std::vector<Lexer::Token>> split_by_statements(const std::vector<Lexer::Token>& code);
-// Expects no semicolon
-std::vector<ParsingNode> run_preparser(const Lexer::Token* begin, const Lexer::Token* end);
 struct Value {
 	uint64_t _value;
 	inline ~Value() {}
@@ -94,6 +94,12 @@ public:
 	friend std::ostream& operator<<(std::ostream& stream, const AST& ast);
 private:
 };
+// Keeps the semicolon at the end around
+std::vector<std::vector<Lexer::Token>> split_by_statements(const std::vector<Lexer::Token>& code);
+// Initializes memory, use delete
+KeywordData* preparse_keyword(const Lexer::Token& keyword, const::Lexer::Token* begin, const Lexer::Token* end, size_t& out_reserved);
+// Expects no semicolon
+std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token* end);
 // For internal use
 ASTNode parse(const ParsingNode* begin, const ParsingNode* end);
 // Main function of the parser

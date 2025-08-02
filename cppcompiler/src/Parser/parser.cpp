@@ -1,10 +1,13 @@
-#include "_parser.hpp"
 #include "../error.hpp"
+#include "_parser.hpp"
 #include <cstdint>
 #include <cstring>
 #include <variant>
 #include <vector>
 namespace Parser {
+ASTNode ParenData::parse_keyword() const {
+	return parse(_expression.data(), _expression.data() + _expression.size());
+}
 ASTNode ScopeData::parse_keyword() const {
 	Operation op{"{"};
 	op._args.reserve(op._args.size() + 1);
@@ -21,26 +24,20 @@ ASTNode IfData::parse_keyword() const {
 	op._args.emplace_back(parse(_else.data(), _else.data() + _else.size()));
 	return ASTNode(std::move(op));
 }
-ASTNode KeywordData::parse_keyword() const {
-	if (std::holds_alternative<ScopeData>(_data))
-		return std::get<ScopeData>(_data).parse_keyword();
-	if (std::holds_alternative<IfData>(_data))
-		return std::get<IfData>(_data).parse_keyword();
-	if (std::holds_alternative<FnData>(_data))
-		ERROR("fn keyword not implemented");
-	if (_data.valueless_by_exception())
-		ERROR("Invalid state");
-	ERROR("Not implemented");
+ASTNode FnData::parse_keyword() const {
+	Operation op{"fn"};
+	op._args.emplace_back(parse(_body.data(), _body.data() + _body.size()));
+	return ASTNode(std::move(op));
 }
 std::optional<uint32_t> ParsingNode::precedence() const {
 	switch (_op_type) {
-		case Operators::Type::prefix:
+	case Operators::Type::prefix:
 		return Operators::prefix_operator_precedence(_token);
-		case Operators::Type::infix:
+	case Operators::Type::infix:
 		return Operators::infix_operator_precedence(_token);
-		case Operators::Type::postfix:
+	case Operators::Type::postfix:
 		return Operators::postfix_operator_precedence(_token);
-		case Operators::Type::none:
+	case Operators::Type::none:
 	default:
 		break;
 	}
@@ -49,23 +46,23 @@ std::optional<uint32_t> ParsingNode::precedence() const {
 std::ostream& operator<<(std::ostream& stream, const ParsingNode& node) {
 	using Operators::Type;
 	switch (node._op_type) {
-		case Type::infix:
-			stream << "\x1b[32m";
-			break;
-		case Type::prefix:
-			stream << "\x1b[33m";
-			break;
-		case Type::postfix:
-			stream << "\x1b[35m";
-			break;
-		case Type::none:
-			stream << "\x1b[31m";
+	case Type::infix:
+		stream << "\x1b[32m";
 		break;
-		case Type::keyword:
-			if (node._keyword_data == nullptr)
-				stream << "\x1b[36m";
-			else
-				stream << "\x1b[34m";
+	case Type::prefix:
+		stream << "\x1b[33m";
+		break;
+	case Type::postfix:
+		stream << "\x1b[35m";
+		break;
+	case Type::none:
+		stream << "\x1b[31m";
+		break;
+	case Type::keyword:
+		if (node._keyword_data == nullptr)
+			stream << "\x1b[36m";
+		else
+			stream << "\x1b[34m";
 		break;
 	}
 	stream << node._token.get() << "\x1b[0m";
@@ -85,7 +82,7 @@ std::ostream& operator<<(std::ostream& stream, const Operation& op) {
 	}
 	for (const ASTNode& arg : op._args)
 		stream << arg << ' ';
-	if (op._args.size() == 1 && (op._operator == "+" || op._operator == "-" ))
+	if (op._args.size() == 1 && (op._operator == "+" || op._operator == "-"))
 		stream << 'u';
 	stream << (op._operator == "" ? "()" : op._operator.get());
 	return stream;
@@ -101,9 +98,7 @@ std::ostream& operator<<(std::ostream& stream, const ASTNode& node) {
 	}
 	return stream;
 }
-AST::AST(size_t statement_amount) : _statements() {
-	_statements.reserve(statement_amount);
-}
+AST::AST(size_t statement_amount) : _statements() { _statements.reserve(statement_amount); }
 void AST::add_statement(const std::vector<ParsingNode>& expression) {
 	_statements.emplace_back(parse(expression.data(), expression.data() + expression.size()));
 }
@@ -119,7 +114,8 @@ ASTNode parse(const ParsingNode* begin, const ParsingNode* end) {
 	}
 	if (begin == end - 1) {
 		if (begin->_op_type == Type::none)
-			return ASTNode(Value::integer(atoi(begin->_token)));;
+			return ASTNode(Value::integer(atoi(begin->_token)));
+		;
 		if (begin->_op_type == Type::keyword) {
 			if (begin->_keyword_data == nullptr)
 				ERROR("Unexpected nullptr");
@@ -128,42 +124,18 @@ ASTNode parse(const ParsingNode* begin, const ParsingNode* end) {
 		ERROR("Syntax Error");
 	}
 	const ParsingNode* max   = begin;
-	size_t             layer = 0;
 	for (const ParsingNode* current = begin; current < end; current++) {
-		if (current->_token == "(") {
-			layer++;
-			continue;
-		}
-		if (current->_token == ")") {
-			if (layer == 0)
-				ERROR("Inconsistent ( )");
-			else
-				layer--;
-			continue;
-		}
-		const bool is_max_invalid{max->_op_type == Type::none || max->_op_type == Type::keyword || (max->_op_type == Type::prefix && max != begin) || (max->_op_type == Type::postfix && max != end - 1)};
-		const bool is_current_valid{current->_op_type == Type::infix || (current->_op_type == Type::prefix && current == begin) || (current->_op_type == Type::postfix && current == end - 1)};
-		const bool is_current_better{current->precedence().value_or(0) > max->precedence().value_or(0) || (current->precedence().value_or(0) == max->precedence().value_or(0) && current->precedence().value_or(0) % 2 == 1)};
-		if (layer == 0 && (is_max_invalid || (is_current_valid && is_current_better)))
+		const bool is_max_invalid{max->_op_type == Type::none || max->_op_type == Type::keyword ||
+		                          (max->_op_type == Type::prefix && max != begin) ||
+		                          (max->_op_type == Type::postfix && max != end - 1)};
+		const bool is_current_valid{current->_op_type == Type::infix ||
+		                            (current->_op_type == Type::prefix && current == begin) ||
+		                            (current->_op_type == Type::postfix && current == end - 1)};
+		const bool is_current_better{current->precedence().value_or(0) > max->precedence().value_or(0) ||
+		                             (current->precedence().value_or(0) == max->precedence().value_or(0) &&
+		                              current->precedence().value_or(0) % 2 == 1)};
+		if (is_max_invalid || (is_current_valid && is_current_better))
 			max = current;
-	}
-	if (layer != 0) {
-		ERROR("Inconsistent ( )");
-	}
-	if (max == begin && max->_token == "(") {
-		// verify braces match
-		layer = 1;
-		for (const ParsingNode* current = begin + 1; current < end - 1; current++) {
-			if (current->_token == "(") {
-				layer++;
-			} else if (current->_token == ")") {
-				layer--;
-				if (layer == 0) {
-					ERROR("Inconsistent ( )");
-				}
-			}
-		}
-		return parse(begin + 1, end - 1);
 	}
 	Operation op = Operation(max->_token);
 	if (max->_op_type == Type::infix || max->_op_type == Type::postfix)
@@ -179,10 +151,10 @@ AST run(const std::vector<Lexer::Token>& code) {
 		if (line.back() != ";")
 			ERROR("Missing semicolon");
 		line.pop_back();
-		std::vector<ParsingNode> preparsed = run_preparser(line.data(), line.data() + line.size());
+		std::vector<ParsingNode> preparsed = preparse(line.data(), line.data() + line.size());
 		/*
 		for (const ParsingNode& node : preparsed)
-			std::cout << node;
+		  std::cout << node;
 		std::cout << '\n';
 		*/
 		ast.add_statement(preparsed);

@@ -1,5 +1,5 @@
+#include "../builtins.hpp"
 #include "_lexer.hpp"
-#include "../operators.hpp"
 #include <cstdint>
 #include <cstring>
 #include <string>
@@ -20,9 +20,9 @@ constexpr uint64_t hashfn(const char* str) {
 }
 struct MapMember {
 	MapMember* next = 0;
-	char*   data = 0;
+	char*      data = 0;
 };
-MapMember token_map[1024]{};
+MapMember   token_map[1024]{};
 const char* make_token(const char* name) {
 	uint64_t   hash    = hashfn(name);
 	MapMember* current = token_map + (hash % 1024);
@@ -52,7 +52,7 @@ CharType classify(char c) {
 }
 } // namespace
 // Token class
-Token::Token(const char* name) : _data(make_token(name)) {}
+Token::Token(const char* name) : _data(name == nullptr ? nullptr : make_token(name)) {}
 // Main function of the lexer
 std::vector<Token> run(const char* code) {
 	std::vector<Token> out{};
@@ -123,14 +123,14 @@ std::vector<Token> run(const char* code) {
 			case '+':
 			case '-':
 				if (c == n) {
-					while (*ptr == c) {
-						partial.push_back(c);
-						ptr++;
-					}
-					ptr--;
-					out.emplace_back(partial.c_str());
-					partial.clear();
-					break;
+				  while (*ptr == c) {
+				    partial.push_back(c);
+				    ptr++;
+				  }
+				  ptr--;
+				  out.emplace_back(partial.c_str());
+				  partial.clear();
+				  break;
 				}
 			*/
 			// tries to merge the next tree or two characters into an operator,
