@@ -26,6 +26,7 @@ ASTNode IfData::parse_keyword() const {
 }
 ASTNode FnData::parse_keyword() const {
 	Operation op{"fn"};
+	op._metadata = new FnMeta(_name, _args);
 	op._args.emplace_back(parse(_body.data(), _body.data() + _body.size()));
 	return ASTNode(std::move(op));
 }
@@ -85,6 +86,20 @@ std::ostream& operator<<(std::ostream& stream, const Operation& op) {
 	if (op._args.size() == 1 && (op._operator == "+" || op._operator == "-"))
 		stream << 'u';
 	stream << (op._operator == "" ? "()" : op._operator.get());
+	if (op._operator == "fn") {
+		FnMeta* meta = reinterpret_cast<FnMeta*>(op._metadata);
+		if (meta == nullptr)
+			ERROR("Unexpected nullptr");
+		stream << ' ' << meta->_name.get() << '(';
+		if (meta->_args.empty()) {
+			stream << ')';
+		} else {
+			stream << meta->_args.front().get();
+			for (size_t i = 1; i < meta->_args.size(); i++)
+				stream << ", " << meta->_args[i].get();
+			stream << ')';
+		}
+	}
 	return stream;
 }
 std::ostream& operator<<(std::ostream& stream, const ASTNode& node) {

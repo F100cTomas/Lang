@@ -7,6 +7,7 @@ namespace Lexer
 class Token {
 	const char* _data{nullptr};
 public:
+	inline Token() {}
 	Token(const char* name);
 	constexpr Token(const Token& token) : _data(token._data) {}
 	constexpr operator const char*() const { return _data; }

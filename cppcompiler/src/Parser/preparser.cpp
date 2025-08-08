@@ -182,7 +182,8 @@ FnData::FnData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_r
 	_name = begin[1];
 	if (begin[2] != "(")
 		ERROR("Missing ( )");
-	for (const Lexer::Token* current = begin + 3; *current != ")"; current++) {
+	const Lexer::Token* current = begin + 3;
+	for (; *current != ")"; current++) {
 		if (current == end)
 			ERROR("Syntax Error");
 		_args.push_back(*current);
@@ -192,6 +193,32 @@ FnData::FnData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_r
 				break;
 			else
 				ERROR("Syntax Error");
+		}
+	}
+	for (; current < end; current++) {
+		if (*current == "{") {
+			// fn ... { <body }
+			size_t layer{0};
+			for (const Lexer::Token* c = current + 1; c < end; c++) {
+				if (layer == 0 && *c == "}") {
+					_body = preparse(current, c + 1);
+					return;
+				}
+				if (*c == "{") {
+					layer++;
+					continue;
+				}
+				if (*c == "}") {
+					layer--;
+					continue;
+				}
+			}
+			ERROR("Inconsistent { }");
+		}
+		if (* current == ":") {
+			// fn ... : <body>
+			_body = preparse(current + 1, end);
+			return;
 		}
 	}
 }
@@ -227,7 +254,7 @@ KeywordData* preparse_keyword(const Lexer::Token& keyword, const::Lexer::Token* 
 		return new ScopeData(begin, end, out_reserved);
 	if (keyword == "if")
 		return new IfData(begin, end, out_reserved);
-	if (keyword == "(")
+	if (keyword == "fn")
 		return new FnData(begin, end, out_reserved);
 	ERROR("Unknown keyword: ", keyword.get());
 	return nullptr;

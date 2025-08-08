@@ -1,6 +1,7 @@
 #pragma once
 #include "../Lexer/_lexer.hpp"
 #include "../builtins.hpp"
+#include "symboltable.hpp"
 #include <iostream>
 #include <vector>
 #include <optional>
@@ -39,7 +40,7 @@ public:
 	ASTNode parse_keyword() const override;
 };
 class FnData : public KeywordData {
-	Lexer::Token _name{nullptr};
+	Lexer::Token _name;
 	std::vector<Lexer::Token> _args;
 	std::vector<ParsingNode> _body;
 public:
@@ -71,11 +72,18 @@ struct Value {
 	}
 	friend std::ostream& operator<<(std::ostream& stream, const Value& val);
 };
+struct FnMeta {
+	Lexer::Token _name;
+	std::vector<Lexer::Token> _args;
+	inline FnMeta(Lexer::Token name, const std::vector<Lexer::Token> args): _name(name), _args(args) {}
+};
 struct Operation {
 	Lexer::Token _operator;
+	void*        _metadata{nullptr};
 	std::vector<ASTNode> _args{};
 	inline Operation(const Lexer::Token& op) : _operator(op), _args() {}
-	inline Operation(Operation&& operation) : _operator(operation._operator), _args(std::move(operation._args)) {}
+	inline Operation(Operation&& operation) : _operator(operation._operator), _metadata(operation._metadata), _args(std::move(operation._args)) {}
+	inline ~Operation() {}
 	friend std::ostream& operator<<(std::ostream& stream, const Operation& op);
 };
 class ASTNode {
@@ -88,6 +96,7 @@ public:
 };
 class AST {
 	std::vector<ASTNode> _statements {};
+	SymbolTable          _symbols{};
 public:
 	AST(size_t statement_amount);
 	void add_statement(const std::vector<ParsingNode>& expression);

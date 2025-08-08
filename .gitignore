@@ -1,4 +1,4 @@
 
 # cppcompiler directory
-cppcompiler/cache/*
+cppcompiler/build/*
 cppcompiler/ferro
