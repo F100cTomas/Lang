@@ -69,11 +69,10 @@ try:
 	while True:
 			expr = gen_expr()
 			# write the test input
-			with open('code.ferro','w') as f:
+			with open('code','w') as f:
 					f.write(expr + ' ;')
 
-			# run ferro and split its RPN
-			proc = subprocess.run(['./ferro'], capture_output=True, text=True)
+			proc = subprocess.run(['./lang'], capture_output=True, text=True)
 			got = proc.stdout.strip().split()
 
 			# generate expected RPN

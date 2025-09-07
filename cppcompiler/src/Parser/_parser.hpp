@@ -96,7 +96,7 @@ public:
 };
 class AST {
 	std::vector<ASTNode> _statements {};
-	SymbolTable          _symbols{};
+	// SymbolTable          _symbols{};
 public:
 	AST(size_t statement_amount);
 	void add_statement(const std::vector<ParsingNode>& expression);
