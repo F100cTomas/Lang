@@ -1,6 +1,7 @@
 
 # cppcompiler directory
-cppcompiler/build/*
+cppcompiler/.build/
+cppcompiler/build/
 cppcompiler/llvm_bin/
 cppcompiler/llvm_lib/
 cppcompiler/llvm_include/
