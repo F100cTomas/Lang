@@ -1,23 +1,23 @@
 #include "../error.hpp"
 #include "_parser.hpp"
+#include "symboltable.hpp"
 #include <cstdint>
 #include <cstring>
-#include <variant>
 #include <vector>
 namespace Parser {
 ASTNode ParenData::parse_keyword() const {
 	return parse(_expression.data(), _expression.data() + _expression.size());
 }
 ASTNode ScopeData::parse_keyword() const {
-	Operation op{"{"};
+	ASTNode op{"{"};
 	op._args.reserve(op._args.size() + 1);
-	for (const std::vector<ParsingNode>& node : _statements)
+	for (const std::vector<ParsingNode>& node: _statements)
 		op._args.emplace_back(parse(node.data(), node.data() + node.size()));
 	op._args.emplace_back(parse(_expression.data(), _expression.data() + _expression.size()));
 	return ASTNode(std::move(op));
 }
 ASTNode IfData::parse_keyword() const {
-	Operation op{"if"};
+	ASTNode op{"if"};
 	op._args.reserve(3);
 	op._args.emplace_back(parse(_cond.data(), _cond.data() + _cond.size()));
 	op._args.emplace_back(parse(_then.data(), _then.data() + _then.size()));
@@ -25,40 +25,28 @@ ASTNode IfData::parse_keyword() const {
 	return ASTNode(std::move(op));
 }
 ASTNode FnData::parse_keyword() const {
-	Operation op{"fn"};
+	ASTNode op{"fn"};
 	op._metadata = new FnMeta(_name, _args);
 	op._args.emplace_back(parse(_body.data(), _body.data() + _body.size()));
 	return ASTNode(std::move(op));
 }
 std::optional<uint32_t> ParsingNode::precedence() const {
 	switch (_op_type) {
-	case Operators::Type::prefix:
-		return Operators::prefix_operator_precedence(_token);
-	case Operators::Type::infix:
-		return Operators::infix_operator_precedence(_token);
-	case Operators::Type::postfix:
-		return Operators::postfix_operator_precedence(_token);
+	case Operators::Type::prefix: return Operators::prefix_operator_precedence(_token);
+	case Operators::Type::infix: return Operators::infix_operator_precedence(_token);
+	case Operators::Type::postfix: return Operators::postfix_operator_precedence(_token);
 	case Operators::Type::none:
-	default:
-		break;
+	default: break;
 	}
 	return {};
 }
 std::ostream& operator<<(std::ostream& stream, const ParsingNode& node) {
 	using Operators::Type;
 	switch (node._op_type) {
-	case Type::infix:
-		stream << "\x1b[32m";
-		break;
-	case Type::prefix:
-		stream << "\x1b[33m";
-		break;
-	case Type::postfix:
-		stream << "\x1b[35m";
-		break;
-	case Type::none:
-		stream << "\x1b[31m";
-		break;
+	case Type::infix: stream << "\x1b[32m"; break;
+	case Type::prefix: stream << "\x1b[33m"; break;
+	case Type::postfix: stream << "\x1b[35m"; break;
+	case Type::none: stream << "\x1b[31m"; break;
 	case Type::keyword:
 		if (node._keyword_data == nullptr)
 			stream << "\x1b[36m";
@@ -69,24 +57,20 @@ std::ostream& operator<<(std::ostream& stream, const ParsingNode& node) {
 	stream << node._token.get() << "\x1b[0m";
 	return stream;
 }
-std::ostream& operator<<(std::ostream& stream, const Value& val) {
-	stream << static_cast<int64_t>(val._value);
-	return stream;
-}
-std::ostream& operator<<(std::ostream& stream, const Operation& op) {
-	if (op._operator == "{") {
+std::ostream& operator<<(std::ostream& stream, const ASTNode& op) {
+	if (op._name == "{") {
 		stream << "{ ";
 		for (size_t i = 0; i < op._args.size() - 1; i++)
 			stream << op._args[i] << " ; ";
 		stream << op._args.back() << " }";
 		return stream;
 	}
-	for (const ASTNode& arg : op._args)
+	for (const ASTNode& arg: op._args)
 		stream << arg << ' ';
-	if (op._args.size() == 1 && (op._operator == "+" || op._operator == "-"))
+	if (op._args.size() == 1 && (op._name == "+" || op._name == "-"))
 		stream << 'u';
-	stream << (op._operator == "" ? "()" : op._operator.get());
-	if (op._operator == "fn") {
+	stream << (op._name == "" ? "()" : op._name.get());
+	if (op._name == "fn") {
 		FnMeta* meta = reinterpret_cast<FnMeta*>(op._metadata);
 		if (meta == nullptr)
 			ERROR("Unexpected nullptr");
@@ -102,34 +86,25 @@ std::ostream& operator<<(std::ostream& stream, const Operation& op) {
 	}
 	return stream;
 }
-std::ostream& operator<<(std::ostream& stream, const ASTNode& node) {
-	if (std::holds_alternative<Value>(node._data)) {
-		stream << std::get<Value>(node._data);
-		return stream;
-	}
-	if (std::holds_alternative<Operation>(node._data)) {
-		stream << std::get<Operation>(node._data);
-		return stream;
-	}
-	return stream;
+AST::AST(size_t statement_amount) : _statements() {
+	_statements.reserve(statement_amount);
 }
-AST::AST(size_t statement_amount) : _statements() { _statements.reserve(statement_amount); }
 void AST::add_statement(const std::vector<ParsingNode>& expression) {
 	_statements.emplace_back(parse(expression.data(), expression.data() + expression.size()));
 }
 std::ostream& operator<<(std::ostream& stream, const AST& ast) {
-	for (const ASTNode& root : ast._statements)
+	for (const ASTNode& root: ast._statements)
 		stream << root << '\n';
 	return stream;
 }
 ASTNode parse(const ParsingNode* begin, const ParsingNode* end) {
 	using Operators::Type;
 	if (begin >= end) {
-		return ASTNode(Value::integer(0));
+		return Lexer::Token("0");
 	}
 	if (begin == end - 1) {
 		if (begin->_op_type == Type::none)
-			return ASTNode(Value::integer(atoi(begin->_token)));
+			return begin->_token;
 		;
 		if (begin->_op_type == Type::keyword) {
 			if (begin->_keyword_data == nullptr)
@@ -138,21 +113,21 @@ ASTNode parse(const ParsingNode* begin, const ParsingNode* end) {
 		}
 		ERROR("Syntax Error");
 	}
-	const ParsingNode* max   = begin;
+	const ParsingNode* max = begin;
 	for (const ParsingNode* current = begin; current < end; current++) {
-		const bool is_max_invalid{max->_op_type == Type::none || max->_op_type == Type::keyword ||
-		                          (max->_op_type == Type::prefix && max != begin) ||
-		                          (max->_op_type == Type::postfix && max != end - 1)};
-		const bool is_current_valid{current->_op_type == Type::infix ||
-		                            (current->_op_type == Type::prefix && current == begin) ||
-		                            (current->_op_type == Type::postfix && current == end - 1)};
-		const bool is_current_better{current->precedence().value_or(0) > max->precedence().value_or(0) ||
-		                             (current->precedence().value_or(0) == max->precedence().value_or(0) &&
-		                              current->precedence().value_or(0) % 2 == 1)};
+		const bool is_max_invalid{max->_op_type == Type::none || max->_op_type == Type::keyword
+		                          || (max->_op_type == Type::prefix && max != begin)
+		                          || (max->_op_type == Type::postfix && max != end - 1)};
+		const bool is_current_valid{current->_op_type == Type::infix
+		                            || (current->_op_type == Type::prefix && current == begin)
+		                            || (current->_op_type == Type::postfix && current == end - 1)};
+		const bool is_current_better{current->precedence().value_or(0) > max->precedence().value_or(0)
+		                             || (current->precedence().value_or(0) == max->precedence().value_or(0)
+		                                 && current->precedence().value_or(0) % 2 == 1)};
 		if (is_max_invalid || (is_current_valid && is_current_better))
 			max = current;
 	}
-	Operation op = Operation(max->_token);
+	ASTNode op = ASTNode(max->_token);
 	if (max->_op_type == Type::infix || max->_op_type == Type::postfix)
 		op._args.emplace_back(parse(begin, max));
 	if (max->_op_type == Type::infix || max->_op_type == Type::prefix)
@@ -162,11 +137,12 @@ ASTNode parse(const ParsingNode* begin, const ParsingNode* end) {
 AST run(const std::vector<Lexer::Token>& code) {
 	std::vector<std::vector<Lexer::Token>> lines = split_by_statements(code);
 	AST                                    ast{lines.size()};
-	for (std::vector<Lexer::Token>& line : lines) {
+	for (std::vector<Lexer::Token>& line: lines) {
 		if (line.back() != ";")
 			ERROR("Missing semicolon");
 		line.pop_back();
-		std::vector<ParsingNode> preparsed = preparse(line.data(), line.data() + line.size());
+		SymbolTable              st{nullptr};
+		std::vector<ParsingNode> preparsed = preparse(line.data(), line.data() + line.size(), st);
 		/*
 		for (const ParsingNode& node : preparsed)
 		  std::cout << node;

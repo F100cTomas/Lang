@@ -1,6 +1,5 @@
 #include "symboltable.hpp"
 #include <cstdint>
-
 namespace Parser {
 namespace {
 constexpr uint64_t hashfn(const char* str) {
@@ -11,5 +10,7 @@ constexpr uint64_t hashfn(const char* str) {
 	}
 	return hash;
 }
-}
-}
+} // namespace
+SymbolTable::SymbolTable(SymbolTable* upper) : _upper_level(upper) {}
+SymbolTable::~SymbolTable() {}
+} // namespace Parser

@@ -3,18 +3,19 @@
 #include <vector>
 
 namespace Parser {
+struct ASTNode;
 class SymbolTable {
 	struct TablePair {
 		Lexer::Token symbol;
-		Lexer::Token value;
+		ASTNode* value;
 	};
 private:
-	std::vector<TablePair> _data[256]{};
+	std::vector<TablePair> _data[16]{};
 	SymbolTable* _upper_level{nullptr};
 public:
-	SymbolTable();
+	SymbolTable(SymbolTable* upper);
 	~SymbolTable();
 public:
-
+	// void insert(const Lexer::Token& index, ASTNode* value);
 };
 }

@@ -1,40 +1,41 @@
+#include "preparser.hpp"
 #include "../error.hpp"
-#include "_parser.hpp"
+#include "symboltable.hpp"
 #include <vector>
 namespace Parser {
-	ParenData::ParenData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_reserved) {
-		std::vector<Lexer::Token> stack{};
-		size_t                    layer{0};
-		out_reserved = 0;
-		for (const Lexer::Token* current = begin + 1; current < end; current++) {
-			if (layer == 0) {
-				if (*current == ")") {
-					out_reserved = current - begin;
-					break;
-				}
-			}
-			stack.push_back(*current);
-			if (*current == "(") {
-				layer++;
-				continue;
-			}
+ParenData::ParenData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved) {
+	std::vector<Lexer::Token> stack{};
+	size_t                    layer{0};
+	out_reserved = 0;
+	for (const Lexer::Token* current = begin + 1; current < end; current++) {
+		if (layer == 0) {
 			if (*current == ")") {
-				layer--;
-				continue;
+				out_reserved = current - begin;
+				break;
 			}
 		}
-		if (out_reserved == 0)
-			ERROR("Inconsistent ( )");
-		_expression = preparse(stack.data(), stack.data() + stack.size());
+		stack.push_back(*current);
+		if (*current == "(") {
+			layer++;
+			continue;
+		}
+		if (*current == ")") {
+			layer--;
+			continue;
+		}
 	}
-ScopeData::ScopeData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_reserved) {
+	if (out_reserved == 0)
+		ERROR("Inconsistent ( )");
+	_expression = preparse(stack.data(), stack.data() + stack.size(), symbols);
+}
+ScopeData::ScopeData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved) {
 	std::vector<Lexer::Token> stack{};
 	size_t                    layer{0};
 	out_reserved = 0;
 	for (const Lexer::Token* current = begin + 1; current < end; current++) {
 		if (layer == 0) {
 			if (*current == ";") {
-				_statements.emplace_back(preparse(stack.data(), stack.data() + stack.size()));
+				_statements.emplace_back(preparse(stack.data(), stack.data() + stack.size(), symbols));
 				stack.clear();
 				continue;
 			}
@@ -55,9 +56,9 @@ ScopeData::ScopeData(const Lexer::Token* begin, const Lexer::Token* end, size_t&
 	}
 	if (out_reserved == 0)
 		ERROR("Inconsistent { }");
-	_expression = preparse(stack.data(), stack.data() + stack.size());
+	_expression = preparse(stack.data(), stack.data() + stack.size(), symbols);
 }
-IfData::IfData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_reserved) {
+IfData::IfData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved) {
 	if (end == begin + 1)
 		ERROR("Syntax Error");
 	const Lexer::Token* cond_begin{nullptr};
@@ -165,17 +166,17 @@ IfData::IfData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_r
 			// if ... <else>
 		}
 	}
-	_cond = preparse(cond_begin, cond_end);
-	_then = preparse(then_begin, then_end);
+	_cond = preparse(cond_begin, cond_end, symbols);
+	_then = preparse(then_begin, then_end, symbols);
 	if (is_if_else)
-		_else = preparse(then_end + 1, end);
+		_else = preparse(then_end + 1, end, symbols);
 	else {
 		_else = {};
-		end           = then_end;
+		end   = then_end;
 	}
 	out_reserved = end - begin - 1;
 }
-FnData::FnData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_reserved) {
+FnData::FnData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved) {
 	out_reserved = end - begin - 1;
 	if (out_reserved < 3)
 		ERROR("Syntax Error");
@@ -201,7 +202,7 @@ FnData::FnData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_r
 			size_t layer{0};
 			for (const Lexer::Token* c = current + 1; c < end; c++) {
 				if (layer == 0 && *c == "}") {
-					_body = preparse(current, c + 1);
+					_body = preparse(current, c + 1, symbols);
 					return;
 				}
 				if (*c == "{") {
@@ -215,9 +216,9 @@ FnData::FnData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_r
 			}
 			ERROR("Inconsistent { }");
 		}
-		if (* current == ":") {
+		if (*current == ":") {
 			// fn ... : <body>
-			_body = preparse(current + 1, end);
+			_body = preparse(current + 1, end, symbols);
 			return;
 		}
 	}
@@ -225,7 +226,7 @@ FnData::FnData(const Lexer::Token* begin, const Lexer::Token* end, size_t& out_r
 std::vector<std::vector<Lexer::Token>> split_by_statements(const std::vector<Lexer::Token>& code) {
 	std::vector<std::vector<Lexer::Token>> out{{}};
 	size_t                                 layer{0};
-	for (const Lexer::Token& token : code) {
+	for (const Lexer::Token& token: code) {
 		out.back().push_back(token);
 		if (token == "{") {
 			layer++;
@@ -247,19 +248,20 @@ std::vector<std::vector<Lexer::Token>> split_by_statements(const std::vector<Lex
 	out.pop_back();
 	return out;
 }
-KeywordData* preparse_keyword(const Lexer::Token& keyword, const::Lexer::Token* begin, const Lexer::Token* end, size_t& out_reserved) {
+KeywordData* preparse_keyword(const Lexer::Token& keyword, const ::Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols,
+                              size_t& out_reserved) {
 	if (keyword == "(")
-		return new ParenData(begin, end, out_reserved);
+		return new ParenData(begin, end, symbols, out_reserved);
 	if (keyword == "{")
-		return new ScopeData(begin, end, out_reserved);
+		return new ScopeData(begin, end, symbols, out_reserved);
 	if (keyword == "if")
-		return new IfData(begin, end, out_reserved);
+		return new IfData(begin, end, symbols, out_reserved);
 	if (keyword == "fn")
-		return new FnData(begin, end, out_reserved);
+		return new FnData(begin, end, symbols, out_reserved);
 	ERROR("Unknown keyword: ", keyword.get());
 	return nullptr;
 }
-std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token* end) {
+std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols) {
 	using Operators::infix_operator_precedence, Operators::prefix_operator_precedence,
 	    Operators::postfix_operator_precedence, Operators::is_keyword, Operators::Type;
 	size_t                   size = end - begin;
@@ -270,8 +272,8 @@ std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token*
 		const Lexer::Token& token = begin[i];
 		if (is_keyword(token)) {
 			size_t       reserved_tokens{0};
-			KeywordData* keyword_data = preparse_keyword(token, begin + i, end, reserved_tokens);
-			result.emplace_back(token, Type::keyword, keyword_data);
+			KeywordData* keyword_data = preparse_keyword(token, begin + i, end, symbols, reserved_tokens);
+			result.emplace_back(token, Type::keyword, keyword_data, &symbols);
 			i += reserved_tokens + 1;
 			break;
 		}
@@ -281,17 +283,17 @@ std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token*
 		if (!prefix.has_value()) {
 			if (infix.has_value() || postfix.has_value())
 				ERROR("Unexpected non-prefix operator: ", token.get());
-			result.emplace_back(token, Type::none, nullptr);
+			result.emplace_back(token, Type::none, nullptr, &symbols);
 			i++;
 			break;
 		}
-		result.emplace_back(token, Type::prefix, nullptr);
+		result.emplace_back(token, Type::prefix, nullptr, &symbols);
 	}
 	struct OperatorInfo {
 		Lexer::Token _token;
 		bool         _is_infix, _is_prefix, _is_postfix;
-		inline OperatorInfo(const Lexer::Token& token, bool is_infix, bool is_prefix, bool is_postfix)
-		    : _token(token), _is_infix(is_infix), _is_prefix(is_prefix), _is_postfix(is_postfix) {}
+		inline OperatorInfo(const Lexer::Token& token, bool is_infix, bool is_prefix, bool is_postfix) :
+		    _token(token), _is_infix(is_infix), _is_prefix(is_prefix), _is_postfix(is_postfix) {}
 	};
 	std::vector<OperatorInfo> stack{};
 	for (; i < size; i++) {
@@ -300,7 +302,7 @@ std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token*
 		size_t              reserved_tokens{0};
 		if (is_keyword(token)) {
 			if (token == "(")
-				keyword_data = preparse_keyword(token, begin + i, end, reserved_tokens);
+				keyword_data = preparse_keyword(token, begin + i, end, symbols, reserved_tokens);
 		}
 		const auto infix   = infix_operator_precedence(token);
 		const auto prefix  = prefix_operator_precedence(token);
@@ -320,39 +322,39 @@ std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token*
 				// explicit infix operator
 				size_t j = 0;
 				for (; j < infix_candidate; j++)
-					result.emplace_back(stack[j]._token, Type::postfix, nullptr);
-				result.emplace_back(stack[j]._token, Type::infix, nullptr);
+					result.emplace_back(stack[j]._token, Type::postfix, nullptr, &symbols);
+				result.emplace_back(stack[j]._token, Type::infix, nullptr, &symbols);
 				for (j++; j < stack.size(); j++)
 					if (!stack[j]._is_prefix)
 						ERROR("Invalid operator order at operator: ", stack[j]._token);
 					else
-						result.emplace_back(stack[j]._token, Type::prefix, nullptr);
+						result.emplace_back(stack[j]._token, Type::prefix, nullptr, &symbols);
 			} else {
 				// implicit infix operator
 				size_t j = 0;
 				for (; j < stack.size() && stack[j]._is_postfix; j++)
-					result.emplace_back(stack[j]._token, Type::postfix, nullptr);
-				result.emplace_back("", Type::infix, nullptr);
+					result.emplace_back(stack[j]._token, Type::postfix, nullptr, &symbols);
+				result.emplace_back("", Type::infix, nullptr, &symbols);
 				for (; j < stack.size(); j++)
 					if (!stack[j]._is_prefix)
 						ERROR("Invalid operator order at operator: ", stack[j]._token);
 					else
-						result.emplace_back(stack[j]._token, Type::prefix, nullptr);
+						result.emplace_back(stack[j]._token, Type::prefix, nullptr, &symbols);
 			}
 			stack.clear();
 			if (keyword_data == nullptr)
-				result.emplace_back(token, Type::none, nullptr);
+				result.emplace_back(token, Type::none, nullptr, &symbols);
 			else {
-				result.emplace_back(token, Type::keyword, keyword_data);
+				result.emplace_back(token, Type::keyword, keyword_data, &symbols);
 				i += reserved_tokens;
 			}
 		}
 	}
-	for (const OperatorInfo& info : stack)
+	for (const OperatorInfo& info: stack)
 		if (!info._is_postfix)
 			ERROR("Unexpected non-postfix operator: ", info._token);
 		else
-			result.emplace_back(info._token, Type::postfix, nullptr);
+			result.emplace_back(info._token, Type::postfix, nullptr, &symbols);
 	return result;
 }
 } // namespace Parser
