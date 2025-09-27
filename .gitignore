@@ -9,5 +9,4 @@ cppcompiler/lang
 cppcompiler/lang.exe
 doc/*
 !doc/*.tex
-!doc/*.pdf
-!doc/*.png
+!doc/*.md
