@@ -6,7 +6,7 @@ Autor: **Ondřej Suk**
 Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vlastní programovací jazyk.
 
 ## Co je cílem projektu
-- Funkční kompilace programu v mém vlastním programovacím jazyce
+- Funkční kompilace programu pro Linux v mém vlastním programovacím jazyce
   - Funkce (klíčové slovo `fn`)
   - Konstantní globální a lokální proměnné (klíčové slovo `let`)
   - Testování podmínek pomocí klíčových slov `if` a `else`
@@ -14,6 +14,7 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
   - Shopnost použít funkce standardní knihovny jazyka C `getchar` a `putchar`
 
 ## Co není cílem, ale může se objevit ve finálním výsledku
+- Kompilace pro jiné operační systémy, než Linux
 - Shopnost práce s vícero soubory
 - Importování knihoven napsaných v jazyce C
 - Vytváření a importování knihoven napsaných v mém vlastním jazyce
