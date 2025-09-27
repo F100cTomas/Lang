@@ -71,7 +71,7 @@ Kompilace na operačním systému Windows je (velmi) experimentální.
 - Jděte na `https://github.com/llvm/llvm-project/releases` a stáhněte si nejnovější verzi.
 (`clang+llvm-X.X.X-x86_64-pc-windows-msvc.tar.xz`)
 - Extrahujte archiv.
-- Jděte do místa stažení a otevřete terminál ve složce `cppcompiler`.
+- Jděte do místa stažení a otevřete terminál ve složce `cppcompiler`:
 ```cmd
 .\setup.bat <jméno složky s extrahovaným obsahem>
 .\build.bat
