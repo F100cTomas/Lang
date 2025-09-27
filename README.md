@@ -40,7 +40,7 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
 ### Září / Říjen
 - Globalní / lokální proměnné a funkce
 ### Listopad / Prosinec
-- Genrace LLVM IR a vznik spustitelných souborů
+- Generace LLVM IR a vznik spustitelných souborů
 ### Leden, Únor...
 **TODO**
 
