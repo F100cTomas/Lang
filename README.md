@@ -20,7 +20,7 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
 - Vytváření a importování knihoven napsaných v mém vlastním jazyce
 - Vlastnosti jazyka:
   - Datové typy kromě 64 - bitových celých čísel se znaménkem
-    - Znaky, 8- 16- 32- bitová celá čísla, celá čísla bez znaménka, čísla s pobyblivou desetinnou čárkou
+    - Znaky, 8- 16- 32- bitová celá čísla, celá čísla bez znaménka, čísla s pohyblivou desetinnou čárkou
     - Seznamy, Struktury, Třídy, Řetězce
   - Měnitelné proměnné
   - Smyčka `for`
