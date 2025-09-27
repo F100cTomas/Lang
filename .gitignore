@@ -7,3 +7,7 @@ cppcompiler/llvm_lib/
 cppcompiler/llvm_include/
 cppcompiler/lang
 cppcompiler/lang.exe
+doc/*
+!doc/*.tex
+!doc/*.pdf
+!doc/*.png
