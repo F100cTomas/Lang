@@ -54,16 +54,31 @@ Dokumentace je psána v LaTeXu a nachází se v `doc/dokumentace.tex`.
 - **llvm**
 - **make**
 #### Kroky
-Otevřít terminál v místě stažení:
+Otevřete terminál v místě stažení:
 ```sh
 cd cppcompiler/
 make
 ```
-Spuštení kompileru:
+Spuštení compileru:
 ```sh
 ./lang
 ```
-### Windows
-Kompilace na operačním systému Windows je (velmi) experimentální a není podporována.
+### Windows (nedoporučeno)
+Kompilace na operačním systému Windows je (velmi) experimentální.
+#### Předpoklady
+- **msvc** (Visual Studio C++)
+#### Kroky
+- Jděte na `https://github.com/llvm/llvm-project/releases` a stáhněte si nejnovější verzi.
+(`clang+llvm-X.X.X-x86_64-pc-windows-msvc.tar.xz`)
+- Extrahujte archiv.
+- Jděte do místa stažení a otevřete terminál ve složce `cppcompiler`.
+```cmd
+.\setup.bat <jméno složky s extrahovaným obsahem>
+.\build.bat
+```
+Spuštění compileru:
+```cmd
+.\lang.exe
+```
 ### MacOS a jiné operační systémy
-Kompilace na MacOS a jiných operačních systémech není a v dohledné době nebude podporována.
+Kompilace na MacOS a na jiných operačních systémech není a v dohledné době nebude podporována.
