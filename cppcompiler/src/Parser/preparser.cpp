@@ -176,11 +176,13 @@ IfData::IfData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& 
 	}
 	out_reserved = end - begin - 1;
 }
-FnData::FnData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved) {
+FnData::FnData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved) :
+    _symbols(symbols) {
 	out_reserved = end - begin - 1;
 	if (out_reserved < 3)
 		ERROR("Syntax Error");
 	_name = begin[1];
+	symbols.insert(_name, nullptr);
 	if (begin[2] != "(")
 		ERROR("Missing ( )");
 	const Lexer::Token* current = begin + 3;
@@ -248,8 +250,8 @@ std::vector<std::vector<Lexer::Token>> split_by_statements(const std::vector<Lex
 	out.pop_back();
 	return out;
 }
-KeywordData* preparse_keyword(const Lexer::Token& keyword, const ::Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols,
-                              size_t& out_reserved) {
+KeywordData* preparse_keyword(const Lexer::Token& keyword, const ::Lexer::Token* begin, const Lexer::Token* end,
+                              SymbolTable& symbols, size_t& out_reserved) {
 	if (keyword == "(")
 		return new ParenData(begin, end, symbols, out_reserved);
 	if (keyword == "{")

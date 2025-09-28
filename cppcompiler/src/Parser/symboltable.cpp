@@ -11,7 +11,12 @@ constexpr uint64_t hashfn(const char* str) {
 	return hash;
 }
 } // namespace
-SymbolTable::SymbolTable(SymbolTable* upper) : _upper_level(upper) {}
+SymbolTable::SymbolTable(SymbolTable* upper) : _upper_level(upper) {
+	if (upper == nullptr) {
+		return;
+	}
+	upper->_lower_level.push_back(this);
+}
 SymbolTable::~SymbolTable() {}
 void SymbolTable::insert(const Lexer::Token& index, ASTNode* value) {
 	uint8_t                  i   = hashfn(index) % 16;
@@ -45,5 +50,13 @@ bool SymbolTable::is_registered(const Lexer::Token& index) const {
 	if (_upper_level == nullptr)
 		return false;
 	return _upper_level->is_registered(index);
+}
+std::ostream& operator<<(std::ostream& stream, const SymbolTable& symbols) {
+	for (uint8_t i = 0; i < 16; i++)
+		for (const TableValue& table_value: symbols._data[i])
+			stream << table_value._symbol << '\n';
+	for (const SymbolTable* table: symbols._lower_level)
+		stream << *table;
+	return stream;
 }
 } // namespace Parser

@@ -3,13 +3,21 @@
 #include "preparser.hpp"
 #include "symboltable.hpp"
 #include <iostream>
+#include <memory>
 #include <vector>
 namespace Parser {
 struct ASTNode;
 struct FnMeta {
 	Lexer::Token              _name;
 	std::vector<Lexer::Token> _args;
-	inline FnMeta(Lexer::Token name, const std::vector<Lexer::Token> args) : _name(name), _args(args) {}
+	SymbolTable&              _symbols;
+	inline FnMeta(const Lexer::Token& name, const std::vector<Lexer::Token> args, SymbolTable& symbols) :
+	    _name(name), _args(args), _symbols(symbols) {}
+};
+struct ReferenceMeta {
+	Lexer::Token _name;
+	SymbolTable& _symbols;
+	inline ReferenceMeta(const Lexer::Token& name, SymbolTable& symbols) : _name(name), _symbols(symbols) {}
 };
 struct ASTNode {
 	Lexer::Token         _name;
@@ -29,10 +37,11 @@ public:
 	AST(size_t statement_amount);
 	void                 add_statement(const std::vector<ParsingNode>& expression);
 	friend std::ostream& operator<<(std::ostream& stream, const AST& ast);
-
-private:
+	inline SymbolTable&  get_symbol_table() {
+    return _symbols;
+	}
 };
 ASTNode parse(const ParsingNode* begin, const ParsingNode* end);
 // Main function of the parser
-AST run(const std::vector<Lexer::Token>& code);
+std::unique_ptr<AST> run(const std::vector<Lexer::Token>& code);
 } // namespace Parser

@@ -44,6 +44,7 @@ class FnData : public KeywordData {
 	Lexer::Token              _name;
 	std::vector<Lexer::Token> _args;
 	std::vector<ParsingNode>  _body;
+	SymbolTable&              _symbols;
 
 public:
 	FnData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved);
@@ -57,7 +58,8 @@ struct ParsingNode {
 	SymbolTable*    _symbols{nullptr};
 
 public:
-	constexpr ParsingNode(const Lexer::Token& token, Operators::Type op_type, KeywordData* keyword_data, SymbolTable* symbols) :
+	constexpr ParsingNode(const Lexer::Token& token, Operators::Type op_type, KeywordData* keyword_data,
+	                      SymbolTable* symbols) :
 	    _token(token), _op_type(op_type), _keyword_data(keyword_data), _symbols(symbols) {}
 	constexpr ParsingNode(const ParsingNode& node) :
 	    _token(node._token), _op_type(node._op_type), _keyword_data(node._keyword_data), _symbols(node._symbols) {}

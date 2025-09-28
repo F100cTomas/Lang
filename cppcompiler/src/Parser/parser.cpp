@@ -26,7 +26,7 @@ ASTNode IfData::parse_keyword() const {
 }
 ASTNode FnData::parse_keyword() const {
 	ASTNode op{"fn"};
-	op._metadata = new FnMeta(_name, _args);
+	op._metadata = new FnMeta(_name, _args, _symbols);
 	op._args.emplace_back(parse(_body.data(), _body.data() + _body.size()));
 	return ASTNode(std::move(op));
 }
@@ -95,6 +95,7 @@ void AST::add_statement(const std::vector<ParsingNode>& expression) {
 std::ostream& operator<<(std::ostream& stream, const AST& ast) {
 	for (const ASTNode& root: ast._statements)
 		stream << root << '\n';
+	stream << ast._symbols;
 	return stream;
 }
 ASTNode parse(const ParsingNode* begin, const ParsingNode* end) {
@@ -134,21 +135,20 @@ ASTNode parse(const ParsingNode* begin, const ParsingNode* end) {
 		op._args.emplace_back(parse(max + 1, end));
 	return ASTNode(std::move(op));
 }
-AST run(const std::vector<Lexer::Token>& code) {
+std::unique_ptr<AST> run(const std::vector<Lexer::Token>& code) {
 	std::vector<std::vector<Lexer::Token>> lines = split_by_statements(code);
-	AST                                    ast{lines.size()};
+	std::unique_ptr<AST>                   ast   = std::make_unique<AST>(lines.size());
 	for (std::vector<Lexer::Token>& line: lines) {
 		if (line.back() != ";")
 			ERROR("Missing semicolon");
 		line.pop_back();
-		SymbolTable              st{nullptr};
-		std::vector<ParsingNode> preparsed = preparse(line.data(), line.data() + line.size(), st);
+		std::vector<ParsingNode> preparsed = preparse(line.data(), line.data() + line.size(), ast->get_symbol_table());
 		/*
 		for (const ParsingNode& node : preparsed)
 		  std::cout << node;
 		std::cout << '\n';
 		*/
-		ast.add_statement(preparsed);
+		ast->add_statement(preparsed);
 	}
 	return ast;
 }
