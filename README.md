@@ -1,4 +1,4 @@
-# Maturitní projekt 2026
+# Compiler vlastního programovací jazyka
 Autor: **Ondřej Suk**
 
 (Pokud máte pro tento projekt dobré jméno, řekněte mi ho)
@@ -7,7 +7,7 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
 
 ## Co je cílem projektu
 - Funkční kompilace programu pro Linux v mém vlastním programovacím jazyce
-- Vlastnosti jayzka:
+- Vlastnosti jazyka:
   - Klíčová slova
     - Funkce o jednom parametru (`fn`)
     - Konstantní lokální a globální proměnné (`let`)
@@ -17,7 +17,8 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
     - Aritmetické (`+`, `-`, `*`, `/`, a `%`)
     - Porovnávací (`==`, `!=`, `>`, `<`, `>=`, `<=`)
     - Logické (`!`, `||`, `&&`)
-  - Shopnost použít funkce standardní knihovny jazyka C `getchar` a `putchar`
+  - Předem definované funkce
+    - `getchar` a `putchar`z C standardní knihovny
 
 ## Co je vedlejším cílem (seřazeno dle priority)
 - Vlastnosti jazyka:
@@ -33,11 +34,11 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
   - Předem definované C funkce kromě `getchar` a `putchar`
 
 ## Co není cílem
-- Kompilace pro jiné operační systémy, než Linux
-- Shopnost práce s vícero soubory
+- Kompilace pro jiné operační systémy než Linux
+- Schopnost práce s vícero soubory
 - Importování knihoven napsaných v jazyce C
 - Vytváření a importování knihoven napsaných v mém vlastním jazyce
-- LSP, či jiné nástroje pro snažší práci s jazykem
+- LSP, či jiné nástroje pro snazší práci s jazykem
 - Optimalizace
 
 ## Časový plán
@@ -49,7 +50,7 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
 ### Září / Říjen
 - [X] Ukládání jmen symbolů
 - [ ] Globální a lokální funkce
-- [ ] Globalní a lokální proměnné
+- [ ] Globální a lokální proměnné
 - [ ] Kostra kódu pro generaci LLVM IR
 ### Listopad / Prosinec
 - [ ] Generace LLVM IR
