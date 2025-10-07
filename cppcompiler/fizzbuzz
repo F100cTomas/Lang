@@ -1,0 +1,15 @@
+fn main() : {
+	let mut line = 1;
+	while (line < 10) {
+		if (line % 3 == 0) {
+			putchar(102);
+		};
+		if (line % 5 == 0) {
+			putchar(98);
+		};
+		if (line % 3 != 0 && line % 5 != 0) {
+			putchar(48 + line);
+		};
+		line = line + 1;
+	};
+};
