@@ -2,8 +2,10 @@
 #include "Lexer/_lexer.hpp"
 #include "Parser/_parser.hpp"
 #include "error.hpp"
+#include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <lld/Common/Driver.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Support/FileSystem.h>
@@ -14,6 +16,7 @@
 #include <llvm/TargetParser/Host.h>
 #include <optional>
 #include <sstream>
+LLD_HAS_DRIVER(elf)
 int main() {
 	std::ifstream     file{"code"};
 	std::stringstream str;
@@ -39,8 +42,10 @@ int main() {
 	llvm::TargetOptions  opt;
 	llvm::TargetMachine* machine = target->createTargetMachine(triple, "generic", "", opt, {});
 	llvm_state._module->setDataLayout(machine->createDataLayout());
-	std::error_code      error2;
-	llvm::raw_fd_ostream dest{"program.o", error2, llvm::sys::fs::OF_None};
+	std::error_code error2;
+	char            o_file_name[L_tmpnam];
+	mkstemp(o_file_name);
+	llvm::raw_fd_ostream dest{o_file_name, error2, llvm::sys::fs::OF_None};
 	if (error2)
 		ERROR("Could not open file: ", error2.message());
 	llvm::legacy::PassManager pass_manager;
@@ -48,4 +53,6 @@ int main() {
 		ERROR("LLVM error");
 	pass_manager.run(*llvm_state._module);
 	dest.flush();
+	lld::lldMain({"ld.lld", o_file_name, "-o", "program"}, llvm::outs(), llvm::errs(), {{lld::Gnu, &lld::elf::link}});
+	std::remove(o_file_name);
 }

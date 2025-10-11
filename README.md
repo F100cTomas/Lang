@@ -5,8 +5,8 @@ Autor: **Ondřej Suk**
 
 Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vlastní programovací jazyk.
 
-## Co je cílem projektu
-- Funkční kompilace programu pro Linux v mém vlastním programovacím jazyce
+## Co je hlavním cílem projektu
+- Funkční kompilace programu pro Linux x86_64 v mém vlastním programovacím jazyce
 - Vlastnosti jazyka:
   - Klíčová slova
     - Funkce o jednom parametru (`fn`)
@@ -34,7 +34,7 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
   - Předem definované C funkce kromě `getchar` a `putchar`
 
 ## Co není cílem
-- Kompilace pro jiné operační systémy než Linux
+- Kompilace pro jiné operační systémy a architektury než Linux x86_64
 - Schopnost práce s vícero soubory
 - Importování knihoven napsaných v jazyce C
 - Vytváření a importování knihoven napsaných v mém vlastním jazyce
@@ -84,7 +84,7 @@ Spuštení compileru:
 ```sh
 ./lang
 ```
-### Windows (nedoporučeno)
+### Windows (nedoporučeno a rozbité)
 Kompilace na operačním systému Windows je (velmi) experimentální.
 #### Předpoklady
 - **msvc** (Visual Studio C++)

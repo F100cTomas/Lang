@@ -7,6 +7,8 @@ cppcompiler/llvm_lib/
 cppcompiler/llvm_include/
 cppcompiler/lang
 cppcompiler/lang.exe
+cppcompiler/program
+cppcompiler/program.exe
 doc/*
 !doc/*.tex
 !doc/*.md

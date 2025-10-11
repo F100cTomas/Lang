@@ -1,6 +1,6 @@
 CPP = clang++
 CPPFLAGS = -Wall -O3 -Isrc $(shell llvm-config --cxxflags)
-LDFLAGS = $(shell llvm-config --ldflags --system-libs --libs core)
+LDFLAGS = $(shell llvm-config --ldflags --system-libs --libs core) -llldCommon -llldELF
 
 HPP = $(shell find src -name "*.hpp")
 SRC = $(shell find src -name "*.cpp")
