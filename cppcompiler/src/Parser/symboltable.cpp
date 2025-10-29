@@ -18,16 +18,20 @@ SymbolTable::SymbolTable(SymbolTable* upper) : _upper_level(upper) {
 	upper->_lower_level.push_back(this);
 }
 SymbolTable::~SymbolTable() {}
-void SymbolTable::insert(const Lexer::Token& index, ASTNode* value) {
+void SymbolTable::create_symbol(const Lexer::Token& index) {
 	uint8_t                  i   = hashfn(index) % 16;
 	std::vector<TableValue>& row = _data[i];
-	for (TableValue& item: row) {
-		if (item._symbol == index.get()) {
+	row.emplace_back(index, nullptr);
+}
+void SymbolTable::define_symbol(const Lexer::Token& index, ASTNode* value) {
+	uint8_t                  i   = hashfn(index) % 16;
+	std::vector<TableValue>& row = _data[i];
+	for (TableValue& item: row)
+		if (index.get() == item._symbol) {
 			item._data = value;
 			return;
 		}
-	}
-	row.emplace_back(index, value);
+	_upper_level->define_symbol(index, value);
 }
 ASTNode* SymbolTable::get(const Lexer::Token& index) const {
 	uint8_t                        i   = hashfn(index) % 16;

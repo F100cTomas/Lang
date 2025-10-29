@@ -3,10 +3,11 @@
 #include "preparser.hpp"
 #include "symboltable.hpp"
 #include <iostream>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Value.h>
 #include <memory>
 #include <vector>
 namespace Parser {
-struct ASTNode;
 struct FnMeta {
 	Lexer::Token              _name;
 	std::vector<Lexer::Token> _args;
@@ -22,26 +23,30 @@ struct ReferenceMeta {
 struct ASTNode {
 	Lexer::Token         _name;
 	void*                _metadata{nullptr};
-	std::vector<ASTNode> _args{};
+	std::vector<ASTNode*> _args{};
 	inline ASTNode(const Lexer::Token& op) : _name(op), _args() {}
 	inline ASTNode(ASTNode&& operation) :
 	    _name(operation._name), _metadata(operation._metadata), _args(std::move(operation._args)) {}
-	inline ~ASTNode() {}
+	~ASTNode();
 	friend std::ostream& operator<<(std::ostream& stream, const ASTNode& op);
 };
 class AST {
-	std::vector<ASTNode> _statements{};
+	std::vector<ASTNode*> _statements{};
 	SymbolTable          _symbols{nullptr};
 
 public:
 	AST(size_t statement_amount);
+	~AST();
 	void                 add_statement(const std::vector<ParsingNode>& expression);
 	friend std::ostream& operator<<(std::ostream& stream, const AST& ast);
+	inline const SymbolTable&  get_symbol_table() const {
+    return _symbols;
+	}
 	inline SymbolTable&  get_symbol_table() {
     return _symbols;
 	}
 };
-ASTNode parse(const ParsingNode* begin, const ParsingNode* end);
+ASTNode* parse(const ParsingNode* begin, const ParsingNode* end);
 // Main function of the parser
 std::unique_ptr<AST> run(const std::vector<Lexer::Token>& code);
 } // namespace Parser

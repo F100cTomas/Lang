@@ -49,12 +49,13 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
 - [X] Stavba Abstract Syntax Tree
 ### Září / Říjen
 - [X] Ukládání jmen symbolů
-- [ ] Globální a lokální funkce
+- [X] Globální
+- [ ] Lokální funkce
 - [ ] Globální a lokální proměnné
-- [ ] Kostra kódu pro generaci LLVM IR
+- [X] Kostra kódu pro generaci LLVM IR
 ### Listopad / Prosinec
 - [ ] Generace LLVM IR
-- [ ] Vytváření spustitelných souborů z LLVM IR
+- [X] Vytváření spustitelných souborů z LLVM IR
 ### Leden, Únor...
 Implementace Vedlejších cílů
 - [ ] Funkce o vícero parametrech

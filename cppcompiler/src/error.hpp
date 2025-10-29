@@ -1,6 +1,6 @@
 #pragma once
 #include <iostream>
-#define ERROR(...) Error::throw_error(__FILE__, __LINE__, __VA_ARGS__)
+#define ERROR(...) ::Error::throw_error(__FILE__, __LINE__, __VA_ARGS__)
 namespace Error {
 inline void error_msg() {
 	std::cerr << "\x1b[0m\n";

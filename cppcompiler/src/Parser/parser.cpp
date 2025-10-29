@@ -5,30 +5,31 @@
 #include <cstring>
 #include <vector>
 namespace Parser {
-ASTNode ParenData::parse_keyword() const {
+ASTNode* ParenData::parse_keyword() const {
 	return parse(_expression.data(), _expression.data() + _expression.size());
 }
-ASTNode ScopeData::parse_keyword() const {
-	ASTNode op{"{"};
-	op._args.reserve(op._args.size() + 1);
+ASTNode* ScopeData::parse_keyword() const {
+	ASTNode* op = new ASTNode("{");
+	op->_args.reserve(op->_args.size() + 1);
 	for (const std::vector<ParsingNode>& node: _statements)
-		op._args.emplace_back(parse(node.data(), node.data() + node.size()));
-	op._args.emplace_back(parse(_expression.data(), _expression.data() + _expression.size()));
-	return ASTNode(std::move(op));
+		op->_args.emplace_back(parse(node.data(), node.data() + node.size()));
+	op->_args.emplace_back(parse(_expression.data(), _expression.data() + _expression.size()));
+	return op;
 }
-ASTNode IfData::parse_keyword() const {
-	ASTNode op{"if"};
-	op._args.reserve(3);
-	op._args.emplace_back(parse(_cond.data(), _cond.data() + _cond.size()));
-	op._args.emplace_back(parse(_then.data(), _then.data() + _then.size()));
-	op._args.emplace_back(parse(_else.data(), _else.data() + _else.size()));
-	return ASTNode(std::move(op));
+ASTNode* IfData::parse_keyword() const {
+	ASTNode* op = new ASTNode("if");
+	op->_args.reserve(3);
+	op->_args.emplace_back(parse(_cond.data(), _cond.data() + _cond.size()));
+	op->_args.emplace_back(parse(_then.data(), _then.data() + _then.size()));
+	op->_args.emplace_back(parse(_else.data(), _else.data() + _else.size()));
+	return op;
 }
-ASTNode FnData::parse_keyword() const {
-	ASTNode op{"fn"};
-	op._metadata = new FnMeta(_name, _args, _symbols);
-	op._args.emplace_back(parse(_body.data(), _body.data() + _body.size()));
-	return ASTNode(std::move(op));
+ASTNode* FnData::parse_keyword() const {
+	ASTNode* op = new ASTNode("fn");
+	op->_metadata = new FnMeta(_name, _args, _symbols);
+	op->_args.emplace_back(parse(_body.data(), _body.data() + _body.size()));
+	_symbols.define_symbol(_name, op);
+	return op;
 }
 std::optional<uint32_t> ParsingNode::precedence() const {
 	switch (_op_type) {
@@ -65,8 +66,8 @@ std::ostream& operator<<(std::ostream& stream, const ASTNode& op) {
 		stream << op._args.back() << " }";
 		return stream;
 	}
-	for (const ASTNode& arg: op._args)
-		stream << arg << ' ';
+	for (const ASTNode* arg: op._args)
+		stream << *arg << ' ';
 	if (op._args.size() == 1 && (op._name == "+" || op._name == "-"))
 		stream << 'u';
 	stream << (op._name == "" ? "()" : op._name.get());
@@ -93,19 +94,27 @@ void AST::add_statement(const std::vector<ParsingNode>& expression) {
 	_statements.emplace_back(parse(expression.data(), expression.data() + expression.size()));
 }
 std::ostream& operator<<(std::ostream& stream, const AST& ast) {
-	for (const ASTNode& root: ast._statements)
-		stream << root << '\n';
+	for (const ASTNode* root: ast._statements)
+		stream << *root << '\n';
 	stream << ast._symbols;
 	return stream;
 }
-ASTNode parse(const ParsingNode* begin, const ParsingNode* end) {
+ASTNode::~ASTNode() {
+for (ASTNode* node : _args)
+	delete node;
+}
+AST::~AST() {
+for (ASTNode* node : _statements)
+	delete node;
+}
+ASTNode* parse(const ParsingNode* begin, const ParsingNode* end) {
 	using Operators::Type;
 	if (begin >= end) {
-		return Lexer::Token("0");
+		return new ASTNode("0");
 	}
 	if (begin == end - 1) {
 		if (begin->_op_type == Type::none)
-			return begin->_token;
+			return new ASTNode(begin->_token);
 		;
 		if (begin->_op_type == Type::keyword) {
 			if (begin->_keyword_data == nullptr)
@@ -128,12 +137,12 @@ ASTNode parse(const ParsingNode* begin, const ParsingNode* end) {
 		if (is_max_invalid || (is_current_valid && is_current_better))
 			max = current;
 	}
-	ASTNode op = ASTNode(max->_token);
+	ASTNode* op = new ASTNode(max->_token);
 	if (max->_op_type == Type::infix || max->_op_type == Type::postfix)
-		op._args.emplace_back(parse(begin, max));
+		op->_args.emplace_back(parse(begin, max));
 	if (max->_op_type == Type::infix || max->_op_type == Type::prefix)
-		op._args.emplace_back(parse(max + 1, end));
-	return ASTNode(std::move(op));
+		op->_args.emplace_back(parse(max + 1, end));
+	return op;
 }
 std::unique_ptr<AST> run(const std::vector<Lexer::Token>& code) {
 	std::vector<std::vector<Lexer::Token>> lines = split_by_statements(code);

@@ -11,7 +11,7 @@ struct ASTNode;
 class KeywordData {
 public:
 	inline virtual ~KeywordData() {};
-	virtual ASTNode parse_keyword() const = 0;
+	virtual ASTNode* parse_keyword() const = 0;
 };
 class ParenData : public KeywordData {
 	std::vector<ParsingNode> _expression;
@@ -19,7 +19,7 @@ class ParenData : public KeywordData {
 public:
 	ParenData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved);
 	inline ~ParenData() override {}
-	ASTNode parse_keyword() const override;
+	ASTNode* parse_keyword() const override;
 };
 class ScopeData : public KeywordData {
 	std::vector<std::vector<ParsingNode>> _statements;
@@ -28,7 +28,7 @@ class ScopeData : public KeywordData {
 public:
 	ScopeData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved);
 	inline ~ScopeData() override {}
-	ASTNode parse_keyword() const override;
+	ASTNode* parse_keyword() const override;
 };
 class IfData : public KeywordData {
 	std::vector<ParsingNode> _cond;
@@ -38,7 +38,7 @@ class IfData : public KeywordData {
 public:
 	IfData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved);
 	inline ~IfData() override {}
-	ASTNode parse_keyword() const override;
+	ASTNode* parse_keyword() const override;
 };
 class FnData : public KeywordData {
 	Lexer::Token              _name;
@@ -49,7 +49,7 @@ class FnData : public KeywordData {
 public:
 	FnData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved);
 	inline ~FnData() override {}
-	ASTNode parse_keyword() const override;
+	ASTNode* parse_keyword() const override;
 };
 struct ParsingNode {
 	Lexer::Token    _token{nullptr};

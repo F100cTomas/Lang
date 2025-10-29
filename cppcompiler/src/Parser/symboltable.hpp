@@ -20,7 +20,8 @@ public:
 	~SymbolTable();
 
 public:
-	void                 insert(const Lexer::Token& index, ASTNode* value);
+	void                 create_symbol(const Lexer::Token& index);
+	void                 define_symbol(const Lexer::Token& index, ASTNode* value);
 	ASTNode*             get(const Lexer::Token& index) const;
 	bool                 is_registered(const Lexer::Token& index) const;
 	friend std::ostream& operator<<(std::ostream& stream, const SymbolTable& symbols);

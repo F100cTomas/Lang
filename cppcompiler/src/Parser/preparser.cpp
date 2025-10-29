@@ -182,7 +182,7 @@ FnData::FnData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& 
 	if (out_reserved < 3)
 		ERROR("Syntax Error");
 	_name = begin[1];
-	symbols.insert(_name, nullptr);
+	symbols.create_symbol(_name);
 	if (begin[2] != "(")
 		ERROR("Missing ( )");
 	const Lexer::Token* current = begin + 3;
