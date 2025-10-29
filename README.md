@@ -85,7 +85,7 @@ Spuštení compileru:
 ```sh
 ./lang
 ```
-### Windows (nedoporučeno a rozbité)
+### Windows (nedoporučeno a částečně rozbité)
 Kompilace na operačním systému Windows je (velmi) experimentální.
 #### Předpoklady
 - **msvc** (Visual Studio C++)

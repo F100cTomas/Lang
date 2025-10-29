@@ -1,4 +1,3 @@
-#include "../error.hpp"
 #include "_llvminterface.hpp"
 #include <lld/Common/Driver.h>
 #include <llvm/IR/LegacyPassManager.h>
@@ -10,7 +9,13 @@
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/TargetParser/Host.h>
 #include <llvm/TargetParser/Triple.h>
+#ifdef __linux__
 LLD_HAS_DRIVER(elf)
+#elif defined(_WIN32)
+#include <Windows.h>
+LLD_HAS_DRIVER(coff)
+#endif
+#include "../error.hpp"
 namespace LlvmInterface {
 void run(const CodeGenerator::LlvmState& llvm_state) {
 	llvm::InitializeAllTargetInfos();
@@ -28,8 +33,14 @@ void run(const CodeGenerator::LlvmState& llvm_state) {
 	llvm::TargetMachine* machine = target->createTargetMachine(triple, "generic", "", opt, {});
 	llvm_state._module->setDataLayout(machine->createDataLayout());
 	std::error_code error2;
-	char            o_file_name[] = "/tmp/langoutputXXXXXXXX";
+#ifdef __linux__
+	char o_file_name[] = "/tmp/langoutputXXXXXXXX";
 	mkstemp(o_file_name);
+#elif defined(_WIN32)
+	char o_file_name[MAX_PATH];
+	if (GetTempFileNameA(".", "langoutput", 0, o_file_name) == 0)
+		ERROR("Could not create temporary file");
+#endif
 	llvm::raw_fd_ostream dest{o_file_name, error2, llvm::sys::fs::OF_None};
 	if (error2)
 		ERROR("Could not open file: ", error2.message());
@@ -38,7 +49,15 @@ void run(const CodeGenerator::LlvmState& llvm_state) {
 		ERROR("LLVM error");
 	pass_manager.run(*llvm_state._module);
 	dest.flush();
+#ifdef __linux__
 	lld::lldMain({"ld.lld", o_file_name, "-o", "program"}, llvm::outs(), llvm::errs(), {{lld::Gnu, &lld::elf::link}});
+#elif defined(_WIN32)
+	lld::lldMain({"lld-link", o_file_name, "/OUT:program.exe"}, llvm::outs(), llvm::errs(),
+	             {{lld::WinLink, &lld::coff::link}});
+#endif
 	std::remove(o_file_name);
 }
 } // namespace LlvmInterface
+#ifdef _WIN32
+extern "C" void xmlFree() {}
+#endif

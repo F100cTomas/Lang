@@ -41,7 +41,7 @@ for %%f in (%SOURCES%) do (
     set OBJECTS=!OBJECTS! !obj!
 
     echo Compiling %%f -> !obj!
-	%CLANG% /std:c++17 /EHsc /O2 /Wall -Wno-c++98-compat -Wno-c++98-compat-pedantic -Xclang -Wno-unsafe-buffer-usage ^
+	%CLANG% /std:c++17 /EHsc /O2 ^
 		%INCLUDES% -c "%%f" /Fo"!obj!"
 )
 
@@ -55,6 +55,5 @@ REM === Link all objects ===
 echo Linking %OUT% ...
 %CLANG% %OBJECTS% ^
   /Fe:%OUT% ^
-  /link /LIBPATH:%LIBPATH% %LIBS% ntdll.lib kernel32.lib advapi32.lib
-
+  /link /LIBPATH:%LIBPATH% %LIBS% ntdll.lib kernel32.lib advapi32.lib libxml2.lib
 endlocal
