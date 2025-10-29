@@ -49,7 +49,7 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
 - [X] Stavba Abstract Syntax Tree
 ### Září / Říjen
 - [X] Ukládání jmen symbolů
-- [X] Globální
+- [X] Globální funkce
 - [ ] Lokální funkce
 - [ ] Globální a lokální proměnné
 - [X] Kostra kódu pro generaci LLVM IR
