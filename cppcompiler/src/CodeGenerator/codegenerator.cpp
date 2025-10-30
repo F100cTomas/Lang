@@ -64,6 +64,11 @@ ExpressionResult codegen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm
 		return function_gen(node, context, module);
 	if (*node->_name.get() >= '0' && *node->_name.get() <= '9')
 		return I64_val(atoi(node->_name));
+	if (node->_args.size() == 2 || node->_args.size() == 1) {
+		if (builder == nullptr)
+			ERROR("Operator outside function");
+		return Operators::operator_gen(node, context, module, *builder);
+	}
 	return I64_val(0);
 }
 LlvmState run(const Parser::AST& ast) {

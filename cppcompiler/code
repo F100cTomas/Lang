@@ -1,1 +1,1 @@
-fn main() : 1;
+fn main() : (fn inner() : 4)(2);
