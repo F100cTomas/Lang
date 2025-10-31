@@ -1,5 +1,6 @@
 #include "../error.hpp"
 #include "_codegenerator.hpp"
+#include <llvm/IR/Argument.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/DerivedTypes.h>
@@ -8,6 +9,7 @@
 #include <llvm/IR/InlineAsm.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Value.h>
+#include <llvm/Support/Alignment.h>
 #include <memory>
 #include <vector>
 namespace CodeGenerator {
@@ -16,6 +18,7 @@ using std::unique_ptr, std::make_unique;
 #define I64_t        Type::getInt64Ty(context)
 #define I64_val(val) ConstantInt::get(I64_t, val)
 namespace {
+Function* putch_fn{nullptr};
 // only works with x64 for now
 void add_start_symbol(LLVMContext& context, Module& module, Function* main_fn) {
 	FunctionType* start_type = FunctionType::get(Type::getVoidTy(context), false);
@@ -34,13 +37,13 @@ void add_start_symbol(LLVMContext& context, Module& module, Function* main_fn) {
 Function* function_gen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm::Module& module) {
 	if (node->_metadata == nullptr)
 		ERROR("Unexpected nullptr.");
-	Parser::FnMeta&          meta = *reinterpret_cast<Parser::FnMeta*>(node->_metadata);
+	Parser::FnMeta& meta = *reinterpret_cast<Parser::FnMeta*>(node->_metadata);
 	// one argument for now
 	/*
 	std::vector<llvm::Type*> args{};
 	args.reserve(meta._args.size());
 	for (size_t i = 0; i < meta._args.size(); i++)
-		args.emplace_back(I64_t);
+	  args.emplace_back(I64_t);
 	*/
 	FunctionType* fn_type  = FunctionType::get(I64_t, {I64_t}, false);
 	Function*     fn       = Function::Create(fn_type, llvm::GlobalValue::InternalLinkage, meta._name.get(), module);
@@ -68,6 +71,31 @@ ExpressionResult codegen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm
 		if (builder == nullptr)
 			ERROR("Operator outside function");
 		return Operators::operator_gen(node, context, module, *builder);
+	}
+	if (node->_name == "putchar") {
+		if (builder == nullptr)
+			ERROR("Function call outside function.");
+		if (putch_fn == nullptr) {
+			FunctionType* putch_fn_type = FunctionType::get(I64_t, {I64_t}, false);
+			putch_fn          = Function::Create(putch_fn_type, llvm::GlobalValue::InternalLinkage, "my_putchar", module);
+			BasicBlock* entry = BasicBlock::Create(context, "", putch_fn);
+			IRBuilder<> builder(entry);
+			Argument*   c_arg = putch_fn->getArg(0);
+			AllocaInst* ptr   = builder.CreateAlloca(I64_t);
+			ptr->setAlignment(Align(8));
+			builder.CreateStore(c_arg, ptr)->setAlignment(Align(8));
+			FunctionType* asm_type = FunctionType::get(Type::getVoidTy(context), {PointerType::get(context, 0)}, false);
+			InlineAsm*    asm_fn   = InlineAsm::get(asm_type,
+			                                        ("mov $$1, %rax; "
+			                                         "mov $$1, %rdi; "
+			                                         "mov $0, %rsi; "
+			                                         "mov $$1, %rdx; "
+			                                         "syscall"),
+			                                        "r,~{rax},~{rdi},~{rsi},~{rdx},~{rcx},~{r11},~{memory}", true);
+			builder.CreateCall(asm_fn, {ptr});
+			builder.CreateRet(I64_val(0));
+		}
+		return putch_fn;
 	}
 	return I64_val(0);
 }

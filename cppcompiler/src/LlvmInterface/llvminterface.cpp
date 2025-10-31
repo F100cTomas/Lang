@@ -34,7 +34,7 @@ void run(const CodeGenerator::LlvmState& llvm_state) {
 	llvm_state._module->setDataLayout(machine->createDataLayout());
 	std::error_code error2;
 #ifdef __linux__
-	char o_file_name[] = "/tmp/langoutputXXXXXXXX";
+	char o_file_name[] = "/tmp/langoutputXXXXXX";
 	mkstemp(o_file_name);
 #elif defined(_WIN32)
 	char o_file_name[MAX_PATH];
