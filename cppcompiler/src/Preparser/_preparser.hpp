@@ -1,13 +1,16 @@
 #pragma once
 #include "../Lexer/_lexer.hpp"
+#include "../Parser/symboltable.hpp"
 #include "../builtins.hpp"
-#include "symboltable.hpp"
 #include <iostream>
 #include <optional>
 #include <vector>
 namespace Parser {
-struct ParsingNode;
 struct ASTNode;
+}
+namespace Preparser {
+using Parser::SymbolTable, Parser::ASTNode;
+struct ParsingNode;
 class KeywordData {
 public:
 	inline virtual ~KeywordData() {};
@@ -77,4 +80,4 @@ KeywordData* preparse_keyword(const Lexer::Token& keyword, const ::Lexer::Token*
                               SymbolTable& symbols, size_t& out_reserved);
 // Expects no semicolon
 std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols);
-} // namespace Parser
+} // namespace Preparser

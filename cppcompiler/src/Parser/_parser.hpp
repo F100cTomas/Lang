@@ -1,6 +1,6 @@
 #pragma once
 #include "../Lexer/_lexer.hpp"
-#include "preparser.hpp"
+#include "../Preparser/_preparser.hpp"
 #include "symboltable.hpp"
 #include <iostream>
 #include <llvm/IR/IRBuilder.h>
@@ -8,6 +8,7 @@
 #include <memory>
 #include <vector>
 namespace Parser {
+using Preparser::ParsingNode;
 struct FnMeta {
 	Lexer::Token              _name;
 	std::vector<Lexer::Token> _args;

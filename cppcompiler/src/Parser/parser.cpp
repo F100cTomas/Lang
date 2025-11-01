@@ -4,7 +4,8 @@
 #include <cstdint>
 #include <cstring>
 #include <vector>
-namespace Parser {
+namespace Preparser {
+using Parser::parse, Parser::FnMeta;
 ASTNode* ParenData::parse_keyword() const {
 	return parse(_expression.data(), _expression.data() + _expression.size());
 }
@@ -58,6 +59,9 @@ std::ostream& operator<<(std::ostream& stream, const ParsingNode& node) {
 	stream << node._token.get() << "\x1b[0m";
 	return stream;
 }
+}
+namespace Parser {
+using Preparser::preparse, Preparser::split_by_statements;
 std::ostream& operator<<(std::ostream& stream, const ASTNode& op) {
 	if (op._name == "{") {
 		stream << "{ ";

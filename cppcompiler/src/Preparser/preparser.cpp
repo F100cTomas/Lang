@@ -1,8 +1,7 @@
-#include "preparser.hpp"
+#include "_preparser.hpp"
 #include "../error.hpp"
-#include "symboltable.hpp"
 #include <vector>
-namespace Parser {
+namespace Preparser {
 ParenData::ParenData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved) {
 	std::vector<Lexer::Token> stack{};
 	size_t                    layer{0};
