@@ -18,7 +18,7 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
     - Porovnávací (`==`, `!=`, `>`, `<`, `>=`, `<=`)
     - Logické (`!`, `||`, `&&`)
   - Předem definované funkce
-    - `getchar` a `putchar`z C standardní knihovny
+    - `getchar` a `putchar`, které fungují jako ty z C standardní knihovny
 
 ## Co je vedlejším cílem (seřazeno dle priority)
 - Vlastnosti jazyka:
@@ -31,7 +31,7 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
     - Přiřazovací operátor `=`
   - Klíčová slova `return`, `break` a `continue`
   - Definice vlastních klíčových slov
-  - Předem definované C funkce kromě `getchar` a `putchar`
+  - Předem definované funkce kromě `getchar` a `putchar`
 
 ## Co není cílem
 - Kompilace pro jiné operační systémy a architektury než Linux x86_64
@@ -50,12 +50,19 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
 ### Září / Říjen
 - [X] Ukládání jmen symbolů
 - [X] Globální funkce
-- [ ] Lokální funkce
-- [ ] Globální a lokální proměnné
-- [X] Kostra kódu pro generaci LLVM IR
-### Listopad / Prosinec
-- [ ] Generace LLVM IR
 - [X] Vytváření spustitelných souborů z LLVM IR
+- [X] Kostra kódu pro generaci LLVM IR
+- [X] Aritmetické operátory
+- [X] Funkce `putchar`
+### Listopad / Prosinec
+- [ ] Funkce `getchar`
+- [ ] Funkce s vícero řádky
+- [ ] klíčové slovo `if`
+- [ ] Porovnávací operátory
+- [ ] Logické operátory
+- [ ] Lokální funkce
+- [ ] Globální proměnné
+- [ ] Lokální proměnné
 ### Leden, Únor...
 Implementace Vedlejších cílů
 - [ ] Funkce o vícero parametrech
