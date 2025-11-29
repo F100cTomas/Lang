@@ -34,7 +34,7 @@ void add_start_symbol(LLVMContext& context, Module& module, Function* main_fn) {
 	IRBuilder<>   builder{entry};
 	Value*        main_ret_val = builder.CreateCall(main_fn, {I64_val(0)});
 #ifdef __linux__
-	FunctionType* exit_type    = FunctionType::get(Type::getVoidTy(context), {I64_t)}, false);
+	FunctionType* exit_type    = FunctionType::get(Type::getVoidTy(context), {I64_t}, false);
 	InlineAsm*    exit         = InlineAsm::get(exit_type, "mov $0, %rdi; mov $$60, %rax; syscall", "r", true);
 	builder.CreateCall(exit, {main_ret_val});
 #elif defined(__MINGW64__)
