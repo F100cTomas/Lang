@@ -1,14 +1,10 @@
-
 # cppcompiler directory
 cppcompiler/.build/
-cppcompiler/build/
-cppcompiler/llvm_bin/
-cppcompiler/llvm_lib/
-cppcompiler/llvm_include/
 cppcompiler/lang
 cppcompiler/lang.exe
 cppcompiler/program
 cppcompiler/program.exe
+cppcompiler/kernel32.lib
 doc/*
 !doc/*.tex
 !doc/*.md

@@ -1,4 +1,10 @@
+#ifdef __MINGW64__
+#include <windows.h>
+#include <memory>
+#undef ERROR
+#endif
 #include "_llvminterface.hpp"
+#include "../error.hpp"
 #include <lld/Common/Driver.h>
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/MC/TargetRegistry.h>
@@ -9,13 +15,8 @@
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/TargetParser/Host.h>
 #include <llvm/TargetParser/Triple.h>
-#ifdef __linux__
 LLD_HAS_DRIVER(elf)
-#elif defined(_WIN32)
-#include <Windows.h>
 LLD_HAS_DRIVER(coff)
-#endif
-#include "../error.hpp"
 namespace LlvmInterface {
 void run(const CodeGenerator::LlvmState& llvm_state) {
 	llvm::InitializeAllTargetInfos();
@@ -36,11 +37,22 @@ void run(const CodeGenerator::LlvmState& llvm_state) {
 #ifdef __linux__
 	char o_file_name[] = "/tmp/langoutputXXXXXX";
 	mkstemp(o_file_name);
-#elif defined(_WIN32)
+#elif defined(__MINGW64__)
 	char o_file_name[MAX_PATH];
-	if (GetTempFileNameA(".", "langoutput", 0, o_file_name) == 0)
-		ERROR("Could not create temporary file");
+	{
+		char tmp_path[MAX_PATH];
+		// Note: The documentation advises GetTempPath2, but I can't seem to be able to link it.
+		if (GetTempPathA(MAX_PATH, tmp_path) == 0) {
+			// TODO: Add formatted Windows error message.
+			ERROR("Could not get temporary path");
+		}
+		if (GetTempFileNameA(tmp_path, "", 0, o_file_name) == 0) {
+			// TODO: Add formatted Windows error message.
+			ERROR("Could not get temporary file name");
+		}
+	}
 #endif
+	std::cout << o_file_name << std::endl;
 	llvm::raw_fd_ostream dest{o_file_name, error2, llvm::sys::fs::OF_None};
 	if (error2)
 		ERROR("Could not open file: ", error2.message());
@@ -51,13 +63,13 @@ void run(const CodeGenerator::LlvmState& llvm_state) {
 	dest.flush();
 #ifdef __linux__
 	lld::lldMain({"ld.lld", o_file_name, "-o", "program"}, llvm::outs(), llvm::errs(), {{lld::Gnu, &lld::elf::link}});
-#elif defined(_WIN32)
-	lld::lldMain({"lld-link", o_file_name, "/OUT:program.exe"}, llvm::outs(), llvm::errs(),
-	             {{lld::WinLink, &lld::coff::link}});
+#elif defined(__MINGW64__)
+	std::string cmd = "lld-link.exe ";
+	cmd += o_file_name;
+	cmd += " /out:program.exe /SUBSYSTEM:CONSOLE kernel32.lib";
+	std::cout << cmd << std::endl;
+	system(cmd.c_str());
 #endif
 	std::remove(o_file_name);
 }
 } // namespace LlvmInterface
-#ifdef _WIN32
-extern "C" void xmlFree() {}
-#endif

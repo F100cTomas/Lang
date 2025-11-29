@@ -79,9 +79,10 @@ Dokumentace je psána v LaTeXu a nachází se v `doc/dokumentace.tex`.
 ## Kompilace
 ### Linux
 #### Předpoklady
+- **make**
 - **clang++**
 - **llvm**
-- **make**
+- **lld**
 #### Kroky
 Otevřete terminál v místě stažení:
 ```sh
@@ -92,22 +93,26 @@ Spuštení compileru:
 ```sh
 ./lang
 ```
-### Windows (nedoporučeno a částečně rozbité)
-Kompilace na operačním systému Windows je (velmi) experimentální.
+Kód je definován v `code` a výsledný program se jmenuje `program`.
+### Windows (nedoporučeno)
+Kompilace na operačním systému Windows je složitější.
 #### Předpoklady
-- **msvc** (Visual Studio C++)
+- **msys2**
+- **make**
+- **mingw-w64-x86_64-clang** (clang++)
+- **mingw-w64-x86_64-llvm**
+- **mingw-w64-x86_64-lld**
 #### Kroky
-- Jděte na `https://github.com/llvm/llvm-project/releases` a stáhněte si nejnovější verzi.
-(`clang+llvm-X.X.X-x86_64-pc-windows-msvc.tar.xz`)
-- Extrahujte archiv.
-- Jděte do místa stažení a otevřete terminál ve složce `cppcompiler`:
-```cmd
-.\setup.bat <jméno složky s extrahovaným obsahem>
-.\build.bat
+Otevřete MSYS2 MINGW terminál v místě stažení:
+```sh
+cd cppcompiler/
+make
 ```
-Spuštění compileru:
-```cmd
-.\lang.exe
+Spuštení compileru:
+```sh
+./lang
 ```
+Kód je definován v `code` a výsledný program se jmenuje `program`.
+Výsledný soubor vyžaduje některá DLL z MSYS2 a MINGW, takže pokud soubor spouštíte mimo MSYS2, tak je nutné je přidat do souboru s `lang.exe`.
 ### MacOS a jiné operační systémy
 Kompilace na MacOS a na jiných operačních systémech není a v dohledné době nebude podporována.

@@ -21,16 +21,28 @@ namespace {
 Function* putch_fn{nullptr};
 // only works with x64 for now
 void add_start_symbol(LLVMContext& context, Module& module, Function* main_fn) {
+#ifdef __linux__
+#define START_SYMBOL "_start"
+#elif defined(__MINGW64__)
+#define START_SYMBOL "mainCRTStartup"
+#endif
 	FunctionType* start_type = FunctionType::get(Type::getVoidTy(context), false);
-	Function*     start      = Function::Create(start_type, GlobalValue::ExternalLinkage, "_start", module);
+	Function*     start      = Function::Create(start_type, GlobalValue::ExternalLinkage, START_SYMBOL, module);
 	start->setDoesNotReturn();
 	start->setCallingConv(CallingConv::C);
 	BasicBlock*   entry = BasicBlock::Create(context, "", start);
 	IRBuilder<>   builder{entry};
-	Value*        main_ret_val = builder.CreateCall(main_fn, {ConstantInt::get(Type::getInt64Ty(context), 0)});
-	FunctionType* exit_type    = FunctionType::get(Type::getVoidTy(context), {Type::getInt64Ty(context)}, false);
+	Value*        main_ret_val = builder.CreateCall(main_fn, {I64_val(0)});
+#ifdef __linux__
+	FunctionType* exit_type    = FunctionType::get(Type::getVoidTy(context), {I64_t)}, false);
 	InlineAsm*    exit         = InlineAsm::get(exit_type, "mov $0, %rdi; mov $$60, %rax; syscall", "r", true);
 	builder.CreateCall(exit, {main_ret_val});
+#elif defined(__MINGW64__)
+	FunctionType* exit_type    = FunctionType::get(Type::getVoidTy(context), {Type::getInt32Ty(context)}, false);
+	Function*     exit         = Function::Create(exit_type, GlobalValue::ExternalLinkage, "ExitProcess", module);
+	exit->setDoesNotReturn();
+	builder.CreateCall(exit, {builder.CreateTrunc(main_ret_val, Type::getInt32Ty(context))});
+#endif
 	builder.CreateUnreachable();
 }
 } // namespace
@@ -84,6 +96,7 @@ ExpressionResult codegen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm
 			AllocaInst* ptr   = builder.CreateAlloca(I64_t);
 			ptr->setAlignment(Align(8));
 			builder.CreateStore(c_arg, ptr)->setAlignment(Align(8));
+#ifdef __linux__
 			FunctionType* asm_type = FunctionType::get(Type::getVoidTy(context), {PointerType::get(context, 0)}, false);
 			InlineAsm*    asm_fn   = InlineAsm::get(asm_type,
 			                                        ("mov $$1, %rax; "
@@ -93,6 +106,14 @@ ExpressionResult codegen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm
 			                                         "syscall"),
 			                                        "r,~{rax},~{rdi},~{rsi},~{rdx},~{rcx},~{r11},~{memory}", true);
 			builder.CreateCall(asm_fn, {ptr});
+#elif defined(__MINGW64__)
+			FunctionType* GetStdHandle_type  = FunctionType::get(PointerType::get(context, 0), {Type::getInt32Ty(context)}, false);
+			Function*     GetStdHandle       = Function::Create(GetStdHandle_type, GlobalValue::ExternalLinkage, "GetStdHandle", module);
+			FunctionType* WriteConsoleA_type = FunctionType::get(Type::getInt8Ty(context), {PointerType::get(context, 0), PointerType::get(context, 0), Type::getInt32Ty(context), PointerType::get(context, 0), PointerType::get(context, 0)}, false);
+			Function*     WriteConsoleA      = Function::Create(WriteConsoleA_type, GlobalValue::ExternalLinkage, "WriteConsoleA", module);
+			Value*        null_ptr           = ConstantPointerNull::get(PointerType::get(context, 0));
+			builder.CreateCall(WriteConsoleA, {builder.CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(context), -11)}), ptr, ConstantInt::get(Type::getInt32Ty(context), 1), null_ptr, null_ptr});
+#endif
 			builder.CreateRet(I64_val(0));
 		}
 		return putch_fn;
