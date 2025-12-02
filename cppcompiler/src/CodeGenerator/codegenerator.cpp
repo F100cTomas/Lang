@@ -30,16 +30,16 @@ void add_start_symbol(LLVMContext& context, Module& module, Function* main_fn) {
 	Function*     start      = Function::Create(start_type, GlobalValue::ExternalLinkage, START_SYMBOL, module);
 	start->setDoesNotReturn();
 	start->setCallingConv(CallingConv::C);
-	BasicBlock*   entry = BasicBlock::Create(context, "", start);
-	IRBuilder<>   builder{entry};
-	Value*        main_ret_val = builder.CreateCall(main_fn, {I64_val(0)});
+	BasicBlock* entry = BasicBlock::Create(context, "", start);
+	IRBuilder<> builder{entry};
+	Value*      main_ret_val = builder.CreateCall(main_fn, {I64_val(0)});
 #ifdef __linux__
-	FunctionType* exit_type    = FunctionType::get(Type::getVoidTy(context), {I64_t}, false);
-	InlineAsm*    exit         = InlineAsm::get(exit_type, "mov $0, %rdi; mov $$60, %rax; syscall", "r", true);
+	FunctionType* exit_type = FunctionType::get(Type::getVoidTy(context), {I64_t}, false);
+	InlineAsm*    exit      = InlineAsm::get(exit_type, "mov $0, %rdi; mov $$60, %rax; syscall", "r", true);
 	builder.CreateCall(exit, {main_ret_val});
 #elif defined(__MINGW64__)
-	FunctionType* exit_type    = FunctionType::get(Type::getVoidTy(context), {Type::getInt32Ty(context)}, false);
-	Function*     exit         = Function::Create(exit_type, GlobalValue::ExternalLinkage, "ExitProcess", module);
+	FunctionType* exit_type = FunctionType::get(Type::getVoidTy(context), {Type::getInt32Ty(context)}, false);
+	Function*     exit      = Function::Create(exit_type, GlobalValue::ExternalLinkage, "ExitProcess", module);
 	exit->setDoesNotReturn();
 	builder.CreateCall(exit, {builder.CreateTrunc(main_ret_val, Type::getInt32Ty(context))});
 #endif
@@ -71,12 +71,23 @@ Function* function_gen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm::
 	fn_builder.CreateRet(std::get<Value*>(res));
 	return fn;
 }
+ExpressionResult scope_gen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm::Module& module,
+                           llvm::IRBuilder<>& builder) {
+	for (size_t i = 0; i < node->_args.size() - 1; i++)
+		codegen(node->_args[i], context, module, &builder);
+	return codegen(node->_args.back(), context, module, &builder);
+}
 ExpressionResult codegen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm::Module& module,
                          llvm::IRBuilder<>* builder) {
 	if (node == nullptr)
 		ERROR("Unexpected nullptr.");
 	if (node->_name == "fn")
 		return function_gen(node, context, module);
+	if (node->_name == "{") {
+		if (builder == nullptr)
+			ERROR("Operator outside function");
+		return scope_gen(node, context, module, *builder);
+	}
 	if (*node->_name.get() >= '0' && *node->_name.get() <= '9')
 		return I64_val(atoi(node->_name));
 	if (node->_args.size() == 2 || node->_args.size() == 1) {
@@ -89,7 +100,7 @@ ExpressionResult codegen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm
 			ERROR("Function call outside function.");
 		if (putch_fn == nullptr) {
 			FunctionType* putch_fn_type = FunctionType::get(I64_t, {I64_t}, false);
-			putch_fn          = Function::Create(putch_fn_type, llvm::GlobalValue::InternalLinkage, "my_putchar", module);
+			putch_fn          = Function::Create(putch_fn_type, llvm::GlobalValue::InternalLinkage, "putchar", module);
 			BasicBlock* entry = BasicBlock::Create(context, "", putch_fn);
 			IRBuilder<> builder(entry);
 			Argument*   c_arg = putch_fn->getArg(0);
@@ -107,12 +118,21 @@ ExpressionResult codegen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm
 			                                        "r,~{rax},~{rdi},~{rsi},~{rdx},~{rcx},~{r11},~{memory}", true);
 			builder.CreateCall(asm_fn, {ptr});
 #elif defined(__MINGW64__)
-			FunctionType* GetStdHandle_type  = FunctionType::get(PointerType::get(context, 0), {Type::getInt32Ty(context)}, false);
-			Function*     GetStdHandle       = Function::Create(GetStdHandle_type, GlobalValue::ExternalLinkage, "GetStdHandle", module);
-			FunctionType* WriteConsoleA_type = FunctionType::get(Type::getInt8Ty(context), {PointerType::get(context, 0), PointerType::get(context, 0), Type::getInt32Ty(context), PointerType::get(context, 0), PointerType::get(context, 0)}, false);
-			Function*     WriteConsoleA      = Function::Create(WriteConsoleA_type, GlobalValue::ExternalLinkage, "WriteConsoleA", module);
-			Value*        null_ptr           = ConstantPointerNull::get(PointerType::get(context, 0));
-			builder.CreateCall(WriteConsoleA, {builder.CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(context), -11)}), ptr, ConstantInt::get(Type::getInt32Ty(context), 1), null_ptr, null_ptr});
+			FunctionType* GetStdHandle_type =
+			    FunctionType::get(PointerType::get(context, 0), {Type::getInt32Ty(context)}, false);
+			Function* GetStdHandle =
+			    Function::Create(GetStdHandle_type, GlobalValue::ExternalLinkage, "GetStdHandle", module);
+			FunctionType* WriteConsoleA_type =
+			    FunctionType::get(Type::getInt8Ty(context),
+			                      {PointerType::get(context, 0), PointerType::get(context, 0), Type::getInt32Ty(context),
+			                       PointerType::get(context, 0), PointerType::get(context, 0)},
+			                      false);
+			Function* WriteConsoleA =
+			    Function::Create(WriteConsoleA_type, GlobalValue::ExternalLinkage, "WriteConsoleA", module);
+			Value* null_ptr = ConstantPointerNull::get(PointerType::get(context, 0));
+			builder.CreateCall(WriteConsoleA,
+			                   {builder.CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(context), -11)}), ptr,
+			                    ConstantInt::get(Type::getInt32Ty(context), 1), null_ptr, null_ptr});
 #endif
 			builder.CreateRet(I64_val(0));
 		}

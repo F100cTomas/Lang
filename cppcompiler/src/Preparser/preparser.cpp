@@ -1,5 +1,5 @@
-#include "_preparser.hpp"
 #include "../error.hpp"
+#include "_preparser.hpp"
 #include <vector>
 namespace Preparser {
 ParenData::ParenData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved) {
@@ -356,6 +356,10 @@ std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token*
 			ERROR("Unexpected non-postfix operator: ", info._token);
 		else
 			result.emplace_back(info._token, Type::postfix, nullptr, &symbols);
+	for (ParsingNode& node: result) {
+		if (node._token == "{" && node._op_type == Type::none)
+			ERROR("Ach jo...");
+	}
 	return result;
 }
-} // namespace Parser
+} // namespace Preparser

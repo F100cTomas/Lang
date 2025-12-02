@@ -26,7 +26,7 @@ ASTNode* IfData::parse_keyword() const {
 	return op;
 }
 ASTNode* FnData::parse_keyword() const {
-	ASTNode* op = new ASTNode("fn");
+	ASTNode* op   = new ASTNode("fn");
 	op->_metadata = new FnMeta(_name, _args, _symbols);
 	op->_args.emplace_back(parse(_body.data(), _body.data() + _body.size()));
 	_symbols.define_symbol(_name, op);
@@ -59,11 +59,13 @@ std::ostream& operator<<(std::ostream& stream, const ParsingNode& node) {
 	stream << node._token.get() << "\x1b[0m";
 	return stream;
 }
-}
+} // namespace Preparser
 namespace Parser {
 using Preparser::preparse, Preparser::split_by_statements;
 std::ostream& operator<<(std::ostream& stream, const ASTNode& op) {
 	if (op._name == "{") {
+		if (op._args.size() == 0)
+			ERROR("Scope parsed wrong");
 		stream << "{ ";
 		for (size_t i = 0; i < op._args.size() - 1; i++)
 			stream << op._args[i] << " ; ";
@@ -104,12 +106,12 @@ std::ostream& operator<<(std::ostream& stream, const AST& ast) {
 	return stream;
 }
 ASTNode::~ASTNode() {
-for (ASTNode* node : _args)
-	delete node;
+	for (ASTNode* node: _args)
+		delete node;
 }
 AST::~AST() {
-for (ASTNode* node : _statements)
-	delete node;
+	for (ASTNode* node: _statements)
+		delete node;
 }
 ASTNode* parse(const ParsingNode* begin, const ParsingNode* end) {
 	using Operators::Type;
@@ -117,9 +119,10 @@ ASTNode* parse(const ParsingNode* begin, const ParsingNode* end) {
 		return new ASTNode("0");
 	}
 	if (begin == end - 1) {
+		if (begin->_token == "{" && begin->_op_type == Type::none)
+			ERROR("Bug in parsing");
 		if (begin->_op_type == Type::none)
 			return new ASTNode(begin->_token);
-		;
 		if (begin->_op_type == Type::keyword) {
 			if (begin->_keyword_data == nullptr)
 				ERROR("Unexpected nullptr");
