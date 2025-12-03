@@ -302,8 +302,7 @@ std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token*
 		KeywordData*        keyword_data{nullptr};
 		size_t              reserved_tokens{0};
 		if (is_keyword(token)) {
-			if (token == "(")
-				keyword_data = preparse_keyword(token, begin + i, end, symbols, reserved_tokens);
+			keyword_data = preparse_keyword(token, begin + i, end, symbols, reserved_tokens);
 		}
 		const auto infix   = infix_operator_precedence(token);
 		const auto prefix  = prefix_operator_precedence(token);
@@ -356,10 +355,6 @@ std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token*
 			ERROR("Unexpected non-postfix operator: ", info._token);
 		else
 			result.emplace_back(info._token, Type::postfix, nullptr, &symbols);
-	for (ParsingNode& node: result) {
-		if (node._token == "{" && node._op_type == Type::none)
-			ERROR("Ach jo...");
-	}
 	return result;
 }
 } // namespace Preparser

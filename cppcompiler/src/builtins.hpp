@@ -53,4 +53,10 @@ constexpr bool is_keyword(const Lexer::Token& token) {
 	default: return false;
 	}
 }
+inline void decide_token(const Lexer::Token& token, bool& none, bool& infix, bool& prefix, bool& postfix) {
+	infix   = infix_operator_precedence(token).has_value();
+	prefix  = prefix_operator_precedence(token).has_value();
+	postfix = postfix_operator_precedence(token).has_value();
+	none    = !(infix || prefix || postfix);
+}
 } // namespace Operators

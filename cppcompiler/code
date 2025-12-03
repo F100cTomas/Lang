@@ -1,4 +1,4 @@
-fn main() : 1 + {
+fn main() {
 	putchar 72;
 	putchar 101;
 	putchar 108;
