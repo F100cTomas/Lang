@@ -4,7 +4,7 @@
 #include <optional>
 namespace Operators {
 // information about operators
-enum class Type : uint8_t { none, infix, prefix, postfix, keyword };
+enum class Type : uint8_t { none, infix, prefix, postfix };
 namespace {
 constexpr uint64_t hashfn(const char* str) {
 	uint64_t hash = 14695981039346656037U;

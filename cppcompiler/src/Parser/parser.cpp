@@ -44,17 +44,15 @@ std::optional<uint32_t> ParsingNode::precedence() const {
 }
 std::ostream& operator<<(std::ostream& stream, const ParsingNode& node) {
 	using Operators::Type;
-	switch (node._op_type) {
-	case Type::infix: stream << "\x1b[32m"; break;
-	case Type::prefix: stream << "\x1b[33m"; break;
-	case Type::postfix: stream << "\x1b[35m"; break;
-	case Type::none: stream << "\x1b[31m"; break;
-	case Type::keyword:
-		if (node._keyword_data == nullptr)
-			stream << "\x1b[36m";
-		else
-			stream << "\x1b[34m";
-		break;
+	if (node._keyword_data != nullptr) {
+		stream << "\x1b[36m";
+	} else {
+		switch (node._op_type) {
+		case Type::infix: stream << "\x1b[32m"; break;
+		case Type::prefix: stream << "\x1b[33m"; break;
+		case Type::postfix: stream << "\x1b[35m"; break;
+		case Type::none: stream << "\x1b[31m"; break;
+		}
 	}
 	stream << node._token.get() << "\x1b[0m";
 	return stream;
@@ -119,20 +117,15 @@ ASTNode* parse(const ParsingNode* begin, const ParsingNode* end) {
 		return new ASTNode("0");
 	}
 	if (begin == end - 1) {
-		if (begin->_token == "{" && begin->_op_type == Type::none)
-			ERROR("Bug in parsing");
+		if (begin->_keyword_data != nullptr)
+			return begin->_keyword_data->parse_keyword();
 		if (begin->_op_type == Type::none)
 			return new ASTNode(begin->_token);
-		if (begin->_op_type == Type::keyword) {
-			if (begin->_keyword_data == nullptr)
-				ERROR("Unexpected nullptr");
-			return begin->_keyword_data->parse_keyword();
-		}
 		ERROR("Syntax Error");
 	}
 	const ParsingNode* max = begin;
 	for (const ParsingNode* current = begin; current < end; current++) {
-		const bool is_max_invalid{max->_op_type == Type::none || max->_op_type == Type::keyword
+		const bool is_max_invalid{max->_op_type == Type::none
 		                          || (max->_op_type == Type::prefix && max != begin)
 		                          || (max->_op_type == Type::postfix && max != end - 1)};
 		const bool is_current_valid{current->_op_type == Type::infix

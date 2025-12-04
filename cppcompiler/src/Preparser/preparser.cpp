@@ -274,7 +274,7 @@ std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token*
 		if (is_keyword(token)) {
 			size_t       reserved_tokens{0};
 			KeywordData* keyword_data = preparse_keyword(token, begin + i, end, symbols, reserved_tokens);
-			result.emplace_back(token, Type::keyword, keyword_data, &symbols);
+			result.emplace_back(token, Type::none, keyword_data, &symbols);
 			i += reserved_tokens + 1;
 			break;
 		}
@@ -321,7 +321,7 @@ std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token*
 			if (infix_candidate != -1) {
 				// explicit infix operator
 				size_t j = 0;
-				for (; j < infix_candidate; j++)
+				for (; static_cast<int64_t>(j) < infix_candidate; j++)
 					result.emplace_back(stack[j]._token, Type::postfix, nullptr, &symbols);
 				result.emplace_back(stack[j]._token, Type::infix, nullptr, &symbols);
 				for (j++; j < stack.size(); j++)
@@ -345,7 +345,7 @@ std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token*
 			if (keyword_data == nullptr)
 				result.emplace_back(token, Type::none, nullptr, &symbols);
 			else {
-				result.emplace_back(token, Type::keyword, keyword_data, &symbols);
+				result.emplace_back(token, Type::none, keyword_data, &symbols);
 				i += reserved_tokens;
 			}
 		}
