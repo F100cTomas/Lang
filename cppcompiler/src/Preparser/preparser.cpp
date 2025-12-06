@@ -249,112 +249,112 @@ std::vector<std::vector<Lexer::Token>> split_by_statements(const std::vector<Lex
 	out.pop_back();
 	return out;
 }
-KeywordData* preparse_keyword(const Lexer::Token& keyword, const ::Lexer::Token* begin, const Lexer::Token* end,
-                              SymbolTable& symbols, size_t& out_reserved) {
-	if (keyword == "(")
-		return new ParenData(begin, end, symbols, out_reserved);
-	if (keyword == "{")
-		return new ScopeData(begin, end, symbols, out_reserved);
-	if (keyword == "if")
-		return new IfData(begin, end, symbols, out_reserved);
-	if (keyword == "fn")
-		return new FnData(begin, end, symbols, out_reserved);
-	ERROR("Unknown keyword: ", keyword.get());
+KeywordData* preparse_keyword(const ParsingNode* begin_before, const ParsingNode* end_before,
+                              const Lexer::Token* keyword, const Lexer::Token* end, SymbolTable& symbols,
+                              size_t& out_reserved_before, size_t& out_reserved_after) {
+	out_reserved_before = 0;
+	if (*keyword == "(")
+		return new ParenData(keyword, end, symbols, out_reserved_after);
+	if (*keyword == "{")
+		return new ScopeData(keyword, end, symbols, out_reserved_after);
+	if (*keyword == "if")
+		return new IfData(keyword, end, symbols, out_reserved_after);
+	if (*keyword == "fn")
+		return new FnData(keyword, end, symbols, out_reserved_after);
+	ERROR("Unknown keyword: ", keyword->get());
 	return nullptr;
 }
 std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols) {
-	using Operators::infix_operator_precedence, Operators::prefix_operator_precedence,
-	    Operators::postfix_operator_precedence, Operators::is_keyword, Operators::Type;
+	using Operators::OperatorInfo, Operators::decide_token, Operators::is_keyword, Operators::Type;
 	size_t                   size = end - begin;
 	std::vector<ParsingNode> result{};
 	result.reserve(size);
-	size_t i = 0;
-	for (; i < size; i++) {
-		const Lexer::Token& token = begin[i];
-		if (is_keyword(token)) {
-			size_t       reserved_tokens{0};
-			KeywordData* keyword_data = preparse_keyword(token, begin + i, end, symbols, reserved_tokens);
-			result.emplace_back(token, Type::none, keyword_data, &symbols);
-			i += reserved_tokens + 1;
-			break;
+	for (const Lexer::Token* ptr = begin; ptr < end; ptr++) {
+		const Lexer::Token& token{*ptr};
+		if (!is_keyword(token)) {
+			result.emplace_back(token, Type::undecided, nullptr, &symbols);
+			continue;
 		}
-		const auto infix   = infix_operator_precedence(token);
-		const auto prefix  = prefix_operator_precedence(token);
-		const auto postfix = postfix_operator_precedence(token);
-		if (!prefix.has_value()) {
-			if (infix.has_value() || postfix.has_value())
-				ERROR("Unexpected non-prefix operator: ", token.get());
-			result.emplace_back(token, Type::none, nullptr, &symbols);
+		size_t       out_reserved_before{0}, out_reserved_after{0};
+		KeywordData* keyword_data = preparse_keyword(result.data(), result.data() + result.size(), ptr, end, symbols,
+		                                             out_reserved_before, out_reserved_after);
+		while (out_reserved_before > 0) {
+			result.pop_back();
+			out_reserved_before--;
+		}
+		result.emplace_back(token, Type::undecided, keyword_data, &symbols);
+		ptr += out_reserved_after;
+	}
+	std::vector<OperatorInfo> possibilities{};
+	possibilities.reserve(size);
+	bool charge{false}; /*
+	  TODO: come up with a better name
+	  true  means after Type::none  and before Type::infix.
+	  false means after Type::infix and before Type::none.
+	*/
+	for (const ParsingNode* ptr = result.data(); ptr < result.data() + result.size(); ptr++) {
+		OperatorInfo info = decide_token(ptr->_token);
+		info._postfix     = info._postfix && charge;
+		info._infix       = info._infix && charge;
+		if (charge && !info._postfix && !info._infix) {
+			OperatorInfo& prev_info = possibilities.back();
+			if (prev_info._infix) {
+				prev_info = {false, true, false, false};
+			} else if (prev_info._none && !prev_info._postfix) {
+				info._postfix = info._postfix && charge;
+				info._infix   = info._infix && charge;
+			}
+		}
+		possibilities.push_back(info);
+		charge = info._none || info._postfix;
+	}
+	if (possibilities.size() != 0 && (possibilities.back()._infix || possibilities.back()._prefix)) {
+		ERROR("Invalid expression");
+	}
+	Type                last_type{Type::prefix};
+	const OperatorInfo* info = possibilities.data();
+	for (size_t i = 0; i < result.size(); i++, info++) {
+		if ((last_type == Type::prefix || last_type == Type::infix) && info->_none) {
+			last_type          = Type::none;
+			result[i]._op_type = Type::none;
+			continue;
+		}
+		if ((last_type == Type::prefix || last_type == Type::infix) && info->_prefix) {
+			last_type          = Type::prefix;
+			result[i]._op_type = Type::prefix;
+			continue;
+		}
+		if ((last_type == Type::postfix || last_type == Type::none) && info->_postfix) {
+			last_type          = Type::postfix;
+			result[i]._op_type = Type::postfix;
+			continue;
+		}
+		if ((last_type == Type::postfix || last_type == Type::none) && info->_infix) {
+			last_type          = Type::infix;
+			result[i]._op_type = Type::infix;
+			continue;
+		}
+		if (info->_none) {
+			last_type          = Type::none;
+			result[i]._op_type = Type::none;
+			result.insert(result.begin() + i, ParsingNode(Lexer::Token(""), Type::infix, nullptr, &symbols));
 			i++;
-			break;
+			continue;
 		}
-		result.emplace_back(token, Type::prefix, nullptr, &symbols);
+		if (info->_prefix) {
+			last_type          = Type::prefix;
+			result[i]._op_type = Type::prefix;
+			result.insert(result.begin() + i, ParsingNode(Lexer::Token(""), Type::infix, nullptr, &symbols));
+			i++;
+			continue;
+		}
+		ERROR("Invalid expression token = \"", result[i]._token, '\"', (info->_none ? "none = true " : "none = false "),
+		      (info->_infix ? "infix = true " : "infix = false "), (info->_prefix ? "prefix = true " : "prefix = false "),
+		      (info->_postfix ? "postfix = true" : "postfix = false"));
 	}
-	struct OperatorInfo {
-		Lexer::Token _token;
-		bool         _is_infix, _is_prefix, _is_postfix;
-		inline OperatorInfo(const Lexer::Token& token, bool is_infix, bool is_prefix, bool is_postfix) :
-		    _token(token), _is_infix(is_infix), _is_prefix(is_prefix), _is_postfix(is_postfix) {}
-	};
-	std::vector<OperatorInfo> stack{};
-	for (; i < size; i++) {
-		const Lexer::Token& token = begin[i];
-		KeywordData*        keyword_data{nullptr};
-		size_t              reserved_tokens{0};
-		if (is_keyword(token)) {
-			keyword_data = preparse_keyword(token, begin + i, end, symbols, reserved_tokens);
-		}
-		const auto infix   = infix_operator_precedence(token);
-		const auto prefix  = prefix_operator_precedence(token);
-		const auto postfix = postfix_operator_precedence(token);
-		if (keyword_data == nullptr && (infix.has_value() || prefix.has_value() || postfix.has_value())) {
-			stack.emplace_back(token, infix.has_value(), prefix.has_value(), postfix.has_value());
-		} else {
-			int64_t infix_candidate = -1;
-			for (size_t j = 0; j < stack.size(); j++)
-				if (!stack[j]._is_postfix) {
-					if (stack[j]._is_infix)
-						infix_candidate = j;
-					break;
-				} else if (stack[j]._is_infix)
-					infix_candidate = j;
-			if (infix_candidate != -1) {
-				// explicit infix operator
-				size_t j = 0;
-				for (; static_cast<int64_t>(j) < infix_candidate; j++)
-					result.emplace_back(stack[j]._token, Type::postfix, nullptr, &symbols);
-				result.emplace_back(stack[j]._token, Type::infix, nullptr, &symbols);
-				for (j++; j < stack.size(); j++)
-					if (!stack[j]._is_prefix)
-						ERROR("Invalid operator order at operator: ", stack[j]._token);
-					else
-						result.emplace_back(stack[j]._token, Type::prefix, nullptr, &symbols);
-			} else {
-				// implicit infix operator
-				size_t j = 0;
-				for (; j < stack.size() && stack[j]._is_postfix; j++)
-					result.emplace_back(stack[j]._token, Type::postfix, nullptr, &symbols);
-				result.emplace_back("", Type::infix, nullptr, &symbols);
-				for (; j < stack.size(); j++)
-					if (!stack[j]._is_prefix)
-						ERROR("Invalid operator order at operator: ", stack[j]._token);
-					else
-						result.emplace_back(stack[j]._token, Type::prefix, nullptr, &symbols);
-			}
-			stack.clear();
-			if (keyword_data == nullptr)
-				result.emplace_back(token, Type::none, nullptr, &symbols);
-			else {
-				result.emplace_back(token, Type::none, keyword_data, &symbols);
-				i += reserved_tokens;
-			}
-		}
-	}
-	for (const OperatorInfo& info: stack)
-		if (!info._is_postfix)
-			ERROR("Unexpected non-postfix operator: ", info._token);
-		else
-			result.emplace_back(info._token, Type::postfix, nullptr, &symbols);
+	for (const ParsingNode& node: result)
+		if (node._op_type == Type::undecided)
+			ERROR("Preparser failed");
 	return result;
 }
 } // namespace Preparser

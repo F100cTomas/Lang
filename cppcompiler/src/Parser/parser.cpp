@@ -52,6 +52,7 @@ std::ostream& operator<<(std::ostream& stream, const ParsingNode& node) {
 		case Type::prefix: stream << "\x1b[33m"; break;
 		case Type::postfix: stream << "\x1b[35m"; break;
 		case Type::none: stream << "\x1b[31m"; break;
+		case Type::undecided: ERROR("Invalid operator type");
 		}
 	}
 	stream << node._token.get() << "\x1b[0m";
@@ -66,8 +67,8 @@ std::ostream& operator<<(std::ostream& stream, const ASTNode& op) {
 			ERROR("Scope parsed wrong");
 		stream << "{ ";
 		for (size_t i = 0; i < op._args.size() - 1; i++)
-			stream << op._args[i] << " ; ";
-		stream << op._args.back() << " }";
+			stream << *op._args[i] << " ; ";
+		stream << *op._args.back() << " }";
 		return stream;
 	}
 	for (const ASTNode* arg: op._args)
@@ -152,11 +153,6 @@ std::unique_ptr<AST> run(const std::vector<Lexer::Token>& code) {
 			ERROR("Missing semicolon");
 		line.pop_back();
 		std::vector<ParsingNode> preparsed = preparse(line.data(), line.data() + line.size(), ast->get_symbol_table());
-		/*
-		for (const ParsingNode& node : preparsed)
-		  std::cout << node;
-		std::cout << '\n';
-		*/
 		ast->add_statement(preparsed);
 	}
 	return ast;

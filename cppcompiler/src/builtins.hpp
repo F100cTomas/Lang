@@ -4,7 +4,7 @@
 #include <optional>
 namespace Operators {
 // information about operators
-enum class Type : uint8_t { none, infix, prefix, postfix };
+enum class Type : uint8_t { undecided, none, infix, prefix, postfix };
 namespace {
 constexpr uint64_t hashfn(const char* str) {
 	uint64_t hash = 14695981039346656037U;
@@ -53,10 +53,18 @@ constexpr bool is_keyword(const Lexer::Token& token) {
 	default: return false;
 	}
 }
-inline void decide_token(const Lexer::Token& token, bool& none, bool& infix, bool& prefix, bool& postfix) {
-	infix   = infix_operator_precedence(token).has_value();
-	prefix  = prefix_operator_precedence(token).has_value();
-	postfix = postfix_operator_precedence(token).has_value();
-	none    = !(infix || prefix || postfix);
+struct OperatorInfo {
+	bool _none, _infix, _prefix, _postfix;
+
+public:
+	inline OperatorInfo(bool none, bool infix, bool prefix, bool postfix) :
+	    _none(none), _infix(infix), _prefix(prefix), _postfix(postfix) {}
+};
+inline OperatorInfo decide_token(const Lexer::Token& token) {
+	bool infix   = infix_operator_precedence(token).has_value();
+	bool prefix  = prefix_operator_precedence(token).has_value();
+	bool postfix = postfix_operator_precedence(token).has_value();
+	bool none    = !(infix || prefix || postfix);
+	return {none, infix, prefix, postfix};
 }
 } // namespace Operators
