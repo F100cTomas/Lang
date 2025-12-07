@@ -29,6 +29,7 @@ ExpressionResult u_minus_gen(Parser::ASTNode* node, llvm::LLVMContext& context, 
                              llvm::IRBuilder<>& builder);
 } // namespace Operators
 llvm::Function*  function_gen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm::Module& module);
+llvm::Value*     let_gen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm::Module& module, llvm::IRBuilder<>& builder);
 ExpressionResult scope_gen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm::Module& module,
                            llvm::IRBuilder<>& builder);
 ExpressionResult codegen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm::Module& module,

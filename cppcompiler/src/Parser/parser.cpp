@@ -5,7 +5,7 @@
 #include <cstring>
 #include <vector>
 namespace Preparser {
-using Parser::parse, Parser::FnMeta;
+using Parser::parse, Parser::FnMeta, Parser::LetMeta;
 ASTNode* ParenData::parse_keyword() const {
 	return parse(_expression.data(), _expression.data() + _expression.size());
 }
@@ -29,6 +29,13 @@ ASTNode* FnData::parse_keyword() const {
 	ASTNode* op   = new ASTNode("fn");
 	op->_metadata = new FnMeta(_name, _args, _symbols);
 	op->_args.emplace_back(parse(_body.data(), _body.data() + _body.size()));
+	_symbols.define_symbol(_name, op);
+	return op;
+}
+ASTNode* LetData::parse_keyword() const {
+	ASTNode* op   = new ASTNode("let");
+	op->_metadata = new LetMeta(_name, _symbols);
+	op->_args.emplace_back(parse(_val.data(), _val.data() + _val.size()));
 	_symbols.define_symbol(_name, op);
 	return op;
 }
@@ -85,8 +92,8 @@ std::ostream& operator<<(std::ostream& stream, const ASTNode& op) {
 			stream << ')';
 		} else {
 			stream << meta->_args.front().get();
-			for (size_t i = 1; i < meta->_args.size(); i++)
-				stream << ", " << meta->_args[i].get();
+			for (const Lexer::Token& arg: meta->_args)
+				stream << ", " << arg.get();
 			stream << ')';
 		}
 	}
@@ -126,8 +133,7 @@ ASTNode* parse(const ParsingNode* begin, const ParsingNode* end) {
 	}
 	const ParsingNode* max = begin;
 	for (const ParsingNode* current = begin; current < end; current++) {
-		const bool is_max_invalid{max->_op_type == Type::none
-		                          || (max->_op_type == Type::prefix && max != begin)
+		const bool is_max_invalid{max->_op_type == Type::none || (max->_op_type == Type::prefix && max != begin)
 		                          || (max->_op_type == Type::postfix && max != end - 1)};
 		const bool is_current_valid{current->_op_type == Type::infix
 		                            || (current->_op_type == Type::prefix && current == begin)

@@ -49,7 +49,8 @@ constexpr bool is_keyword(const Lexer::Token& token) {
 	case hashfn("("):
 	case hashfn("{"):
 	case hashfn("if"):
-	case hashfn("fn"): return true;
+	case hashfn("fn"):
+	case hashfn("let"): return true;
 	default: return false;
 	}
 }

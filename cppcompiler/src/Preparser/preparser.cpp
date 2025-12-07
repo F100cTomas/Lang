@@ -224,6 +224,25 @@ FnData::FnData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& 
 		}
 	}
 }
+LetData::LetData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved) :
+    _symbols(symbols) {
+	out_reserved = end - begin - 1;
+	if (out_reserved == 0)
+		ERROR("Syntax Error");
+	_name = begin[1];
+	symbols.create_symbol(_name);
+	if (out_reserved == 1) {
+		_val = {};
+		return;
+	} else if (begin[2] != "=")
+		ERROR("Syntax Error");
+	_val = preparse(begin + 3, end, symbols);
+	/*
+	for (const ParsingNode& node: _val)
+		std::cout << node << ' ';
+	std::cout << std::endl;
+	*/
+}
 std::vector<std::vector<Lexer::Token>> split_by_statements(const std::vector<Lexer::Token>& code) {
 	std::vector<std::vector<Lexer::Token>> out{{}};
 	size_t                                 layer{0};
@@ -261,11 +280,18 @@ KeywordData* preparse_keyword(const ParsingNode* begin_before, const ParsingNode
 		return new IfData(keyword, end, symbols, out_reserved_after);
 	if (*keyword == "fn")
 		return new FnData(keyword, end, symbols, out_reserved_after);
+	if (*keyword == "let")
+		return new LetData(keyword, end, symbols, out_reserved_after);
 	ERROR("Unknown keyword: ", keyword->get());
 	return nullptr;
 }
 std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols) {
 	using Operators::OperatorInfo, Operators::decide_token, Operators::is_keyword, Operators::Type;
+	/*
+	for (const Lexer::Token* c = begin; c < end; c++)
+	  std::cout << c->get() << ' ';
+	std::cout << std::endl;
+	*/
 	size_t                   size = end - begin;
 	std::vector<ParsingNode> result{};
 	result.reserve(size);

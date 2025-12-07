@@ -1,4 +1,4 @@
-fn main() {
+fn main() : putchar {
 	putchar 72;
 	putchar 101;
 	putchar 108;
@@ -12,4 +12,6 @@ fn main() {
 	putchar 100;
 	putchar 33;
 	putchar 10;
-};
+	let test = 65;
+	65
+} + putchar 10;

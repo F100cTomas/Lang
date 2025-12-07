@@ -32,7 +32,7 @@ ExpressionResult operator_gen(Parser::ASTNode* node, llvm::LLVMContext& context,
 		case hashfn("+"): return u_plus_gen(node, context, module, builder);
 		case hashfn("-"): return u_minus_gen(node, context, module, builder);
 		default: {
-			ERROR("Operator not implemented.");
+			ERROR("Operator not implemented:", node->_name.get());
 			return I64_val(0);
 		}
 		}

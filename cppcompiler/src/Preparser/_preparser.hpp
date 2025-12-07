@@ -54,6 +54,16 @@ public:
 	inline ~FnData() override {}
 	ASTNode* parse_keyword() const override;
 };
+class LetData : public KeywordData {
+	Lexer::Token              _name;
+	std::vector<ParsingNode>  _val;
+	SymbolTable&              _symbols;
+
+public:
+	LetData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved);
+	inline ~LetData() override {}
+	ASTNode* parse_keyword() const override;
+};
 struct ParsingNode {
 	Lexer::Token    _token{nullptr};
 	Operators::Type _op_type{Operators::Type::none};
@@ -76,9 +86,8 @@ public:
 // Keeps the semicolon at the end around
 std::vector<std::vector<Lexer::Token>> split_by_statements(const std::vector<Lexer::Token>& code);
 // Initializes memory, use delete
-KeywordData* preparse_keyword(const ParsingNode* begin_before, const ParsingNode* end_before,
-                              const Lexer::Token* keyword, const Lexer::Token* end, SymbolTable& symbols,
-                              size_t& out_reserved_before, size_t& out_reserved_after);
+KeywordData* preparse_keyword(const Lexer::Token* begin, const Lexer::Token* keyword, const Lexer::Token* end,
+                              SymbolTable& symbols, size_t& out_reserved_before, size_t& out_reserved_after);
 // Expects no semicolon
 std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols);
 } // namespace Preparser

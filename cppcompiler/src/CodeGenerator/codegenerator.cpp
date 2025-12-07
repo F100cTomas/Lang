@@ -71,6 +71,19 @@ Function* function_gen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm::
 	fn_builder.CreateRet(std::get<Value*>(res));
 	return fn;
 }
+Value* let_gen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm::Module& module, llvm::IRBuilder<>& builder) {
+	if (node->_metadata == nullptr)
+		ERROR("Unexpected nullptr.");
+	// Parser::LetMeta& meta = *reinterpret_cast<Parser::LetMeta*>(node->_metadata);
+	ExpressionResult res = codegen(node->_args.front(), context, module, &builder);
+	if (res.index() == 0) {
+		Value* ptr = builder.CreateAlloca(I64_t);
+		builder.CreateStore(std::get<Value*>(res), ptr);
+		return std::get<Value*>(res);
+	}
+	ERROR("Cannot assign a function to a variable");
+	return nullptr;
+}
 ExpressionResult scope_gen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm::Module& module,
                            llvm::IRBuilder<>& builder) {
 	for (size_t i = 0; i < node->_args.size() - 1; i++)
@@ -81,6 +94,8 @@ ExpressionResult codegen(Parser::ASTNode* node, llvm::LLVMContext& context, llvm
                          llvm::IRBuilder<>* builder) {
 	if (node == nullptr)
 		ERROR("Unexpected nullptr.");
+	if (node->_name == "let")
+		return let_gen(node, context, module, *builder);
 	if (node->_name == "fn")
 		return function_gen(node, context, module);
 	if (node->_name == "{") {

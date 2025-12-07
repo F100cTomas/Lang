@@ -16,14 +16,19 @@ struct FnMeta {
 	inline FnMeta(const Lexer::Token& name, const std::vector<Lexer::Token> args, SymbolTable& symbols) :
 	    _name(name), _args(args), _symbols(symbols) {}
 };
+struct LetMeta {
+	Lexer::Token _name;
+	SymbolTable& _symbols;
+	inline LetMeta(const Lexer::Token& name, SymbolTable& symbols) : _name(name), _symbols(symbols) {}
+};
 struct ReferenceMeta {
 	Lexer::Token _name;
 	SymbolTable& _symbols;
 	inline ReferenceMeta(const Lexer::Token& name, SymbolTable& symbols) : _name(name), _symbols(symbols) {}
 };
 struct ASTNode {
-	Lexer::Token         _name;
-	void*                _metadata{nullptr};
+	Lexer::Token          _name;
+	void*                 _metadata{nullptr};
 	std::vector<ASTNode*> _args{};
 	inline ASTNode(const Lexer::Token& op) : _name(op), _args() {}
 	inline ASTNode(ASTNode&& operation) :
@@ -33,18 +38,18 @@ struct ASTNode {
 };
 class AST {
 	std::vector<ASTNode*> _statements{};
-	SymbolTable          _symbols{nullptr};
+	SymbolTable           _symbols{nullptr};
 
 public:
 	AST(size_t statement_amount);
 	~AST();
-	void                 add_statement(const std::vector<ParsingNode>& expression);
-	friend std::ostream& operator<<(std::ostream& stream, const AST& ast);
-	inline const SymbolTable&  get_symbol_table() const {
-    return _symbols;
+	void                      add_statement(const std::vector<ParsingNode>& expression);
+	friend std::ostream&      operator<<(std::ostream& stream, const AST& ast);
+	inline const SymbolTable& get_symbol_table() const {
+		return _symbols;
 	}
-	inline SymbolTable&  get_symbol_table() {
-    return _symbols;
+	inline SymbolTable& get_symbol_table() {
+		return _symbols;
 	}
 };
 ASTNode* parse(const ParsingNode* begin, const ParsingNode* end);
