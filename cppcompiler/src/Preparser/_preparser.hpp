@@ -1,93 +1,95 @@
 #pragma once
 #include "../Lexer/_lexer.hpp"
-#include "../Parser/symboltable.hpp"
 #include "../builtins.hpp"
-#include <iostream>
+#include "../symboltable.hpp"
 #include <optional>
+#include <iostream>
 #include <vector>
 namespace Parser {
 struct ASTNode;
 }
 namespace Preparser {
-using Parser::SymbolTable, Parser::ASTNode;
+using Parser::ASTNode;
 struct ParsingNode;
 class KeywordData {
 public:
 	inline virtual ~KeywordData() {};
-	virtual ASTNode* parse_keyword() const = 0;
+	virtual ASTNode* parse_keyword(Symbol* symbol) const = 0;
 };
 class ParenData : public KeywordData {
-	std::vector<ParsingNode> _expression;
+	std::vector<Symbol*> _expression{};
 
 public:
 	ParenData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved);
 	inline ~ParenData() override {}
-	ASTNode* parse_keyword() const override;
+	ASTNode* parse_keyword(Symbol* symbol) const override;
 };
 class ScopeData : public KeywordData {
-	std::vector<std::vector<ParsingNode>> _statements;
-	std::vector<ParsingNode>              _expression;
+	std::vector<std::vector<Symbol*>> _statements{};
+	std::vector<SymbolTable*>         _scope{};
 
 public:
 	ScopeData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved);
 	inline ~ScopeData() override {}
-	ASTNode* parse_keyword() const override;
+	ASTNode* parse_keyword(Symbol* symbol) const override;
 };
 class IfData : public KeywordData {
-	std::vector<ParsingNode> _cond;
-	std::vector<ParsingNode> _then;
-	std::vector<ParsingNode> _else;
+	std::vector<Symbol*> _cond{};
+	std::vector<Symbol*> _then{};
+	std::vector<Symbol*> _else{};
+	SymbolTable*         _cond_scope{nullptr};
+	SymbolTable*         _then_scope{nullptr};
+	SymbolTable*         _else_scope{nullptr};
 
 public:
 	IfData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved);
 	inline ~IfData() override {}
-	ASTNode* parse_keyword() const override;
+	ASTNode* parse_keyword(Symbol* symbol) const override;
 };
 class FnData : public KeywordData {
 	Lexer::Token              _name;
 	std::vector<Lexer::Token> _args;
-	std::vector<ParsingNode>  _body;
-	SymbolTable&              _symbols;
+	std::vector<Symbol*>      _body;
+	SymbolTable&              _scope;
 
 public:
-	FnData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved);
+	FnData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved, Symbol*& out_symbol);
 	inline ~FnData() override {}
-	ASTNode* parse_keyword() const override;
+	ASTNode* parse_keyword(Symbol* symbol) const override;
 };
 class LetData : public KeywordData {
-	Lexer::Token              _name;
-	std::vector<ParsingNode>  _val;
-	SymbolTable&              _symbols;
+	Lexer::Token         _name;
+	std::vector<Symbol*> _val;
 
 public:
-	LetData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved);
+	LetData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved, Symbol*& out_symbol);
 	inline ~LetData() override {}
-	ASTNode* parse_keyword() const override;
+	ASTNode* parse_keyword(Symbol* symbol) const override;
 };
 struct ParsingNode {
-	Lexer::Token    _token{nullptr};
+	Lexer::Token    _token{};
 	Operators::Type _op_type{Operators::Type::none};
 	KeywordData*    _keyword_data{nullptr};
-	SymbolTable*    _symbols{nullptr};
-
-public:
-	constexpr ParsingNode(const Lexer::Token& token, Operators::Type op_type, KeywordData* keyword_data,
-	                      SymbolTable* symbols) :
-	    _token(token), _op_type(op_type), _keyword_data(keyword_data), _symbols(symbols) {}
-	constexpr ParsingNode(const ParsingNode& node) :
-	    _token(node._token), _op_type(node._op_type), _keyword_data(node._keyword_data), _symbols(node._symbols) {}
-	inline ~ParsingNode() {
-		if (_keyword_data != nullptr)
-			delete _keyword_data;
+	inline Symbol*  make_symbol(SymbolTable& symbol_table) {
+    Symbol* symbol = new Symbol(*this);
+    symbol_table.register_symbol(symbol);
+    return symbol;
+	}
+	inline Symbol*  make_named_symbol(SymbolTable& symbol_table, const Lexer::Token& name) {
+    Symbol* symbol = new Symbol(*this);
+    symbol_table.register_named_symbol(symbol, name);
+    return symbol;
 	}
 	std::optional<uint32_t> precedence() const;
-	friend std::ostream&    operator<<(std::ostream& stream, const ParsingNode& node);
+	friend std::ostream& operator << (std::ostream& stream, const ParsingNode& node);
 };
 // Keeps the semicolon at the end around
 std::vector<std::vector<Lexer::Token>> split_by_statements(const std::vector<Lexer::Token>& code);
 // Initializes memory, use delete
-KeywordData* preparse_keyword(const Lexer::Token* begin, const Lexer::Token* keyword, const Lexer::Token* end,
-                              SymbolTable& symbols, size_t& out_reserved_before, size_t& out_reserved_after);
+Symbol* preparse_keyword(Symbol* const* begin_before, Symbol* const* end_before, const Lexer::Token* keyword,
+                              const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved_before,
+                              size_t& out_reserved_after);
 // Expects no semicolon
-std::vector<ParsingNode> preparse(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols);
+std::vector<Symbol*> preparse(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols);
+void                 run(const Lexer::Tokenized& code, SymbolTable& symbols);
 } // namespace Preparser

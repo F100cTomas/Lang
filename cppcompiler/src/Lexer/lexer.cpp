@@ -54,7 +54,7 @@ CharType classify(char c) {
 // Token class
 Token::Token(const char* name) : _data(name == nullptr ? nullptr : make_token(name)) {}
 // Main function of the lexer
-std::vector<Token> run(const char* code) {
+Tokenized run(const char* code) {
 	std::vector<Token> out{};
 	std::string        partial{};
 	for (const char* ptr = code; *ptr != '\0'; ptr++) {

@@ -1,42 +1,41 @@
 #include "../error.hpp"
+#include "../symboltable.hpp"
 #include "_parser.hpp"
-#include "symboltable.hpp"
 #include <cstdint>
-#include <cstring>
+#include <ostream>
 #include <vector>
 namespace Preparser {
 using Parser::parse, Parser::FnMeta, Parser::LetMeta;
-ASTNode* ParenData::parse_keyword() const {
-	return parse(_expression.data(), _expression.data() + _expression.size());
+ASTNode* ParenData::parse_keyword(Symbol* symbol) const {
+	Symbol* inside = parse(_expression.data(), _expression.data() + _expression.size());
+	symbol->be_suceeded_by(inside);
+	return &inside->get_ast_node();
 }
-ASTNode* ScopeData::parse_keyword() const {
+ASTNode* ScopeData::parse_keyword(Symbol* symbol) const {
 	ASTNode* op = new ASTNode("{");
-	op->_args.reserve(op->_args.size() + 1);
-	for (const std::vector<ParsingNode>& node: _statements)
-		op->_args.emplace_back(parse(node.data(), node.data() + node.size()));
-	op->_args.emplace_back(parse(_expression.data(), _expression.data() + _expression.size()));
+	op->_args.reserve(_statements.size());
+	for (const std::vector<Symbol*>& node: _statements)
+		op->_args.push_back(parse(node.data(), node.data() + node.size()));
 	return op;
 }
-ASTNode* IfData::parse_keyword() const {
+ASTNode* IfData::parse_keyword(Symbol* symbol) const {
 	ASTNode* op = new ASTNode("if");
 	op->_args.reserve(3);
-	op->_args.emplace_back(parse(_cond.data(), _cond.data() + _cond.size()));
-	op->_args.emplace_back(parse(_then.data(), _then.data() + _then.size()));
-	op->_args.emplace_back(parse(_else.data(), _else.data() + _else.size()));
+	op->_args.push_back(parse(_cond.data(), _cond.data() + _cond.size()));
+	op->_args.push_back(parse(_then.data(), _then.data() + _then.size()));
+	op->_args.push_back(parse(_else.data(), _else.data() + _else.size()));
 	return op;
 }
-ASTNode* FnData::parse_keyword() const {
+ASTNode* FnData::parse_keyword(Symbol* symbol) const {
 	ASTNode* op   = new ASTNode("fn");
-	op->_metadata = new FnMeta(_name, _args, _symbols);
-	op->_args.emplace_back(parse(_body.data(), _body.data() + _body.size()));
-	_symbols.define_symbol(_name, op);
+	op->_metadata = new FnMeta{_name, _args};
+	op->_args.push_back(parse(_body.data(), _body.data() + _body.size()));
 	return op;
 }
-ASTNode* LetData::parse_keyword() const {
+ASTNode* LetData::parse_keyword(Symbol* symbol) const {
 	ASTNode* op   = new ASTNode("let");
-	op->_metadata = new LetMeta(_name, _symbols);
-	op->_args.emplace_back(parse(_val.data(), _val.data() + _val.size()));
-	_symbols.define_symbol(_name, op);
+	op->_metadata = new LetMeta{_name};
+	op->_args.push_back(parse(_val.data(), _val.data() + _val.size()));
 	return op;
 }
 std::optional<uint32_t> ParsingNode::precedence() const {
@@ -49,118 +48,50 @@ std::optional<uint32_t> ParsingNode::precedence() const {
 	}
 	return {};
 }
-std::ostream& operator<<(std::ostream& stream, const ParsingNode& node) {
-	using Operators::Type;
-	if (node._keyword_data != nullptr) {
-		stream << "\x1b[36m";
-	} else {
-		switch (node._op_type) {
-		case Type::infix: stream << "\x1b[32m"; break;
-		case Type::prefix: stream << "\x1b[33m"; break;
-		case Type::postfix: stream << "\x1b[35m"; break;
-		case Type::none: stream << "\x1b[31m"; break;
-		case Type::undecided: ERROR("Invalid operator type");
-		}
-	}
-	stream << node._token.get() << "\x1b[0m";
-	return stream;
-}
 } // namespace Preparser
 namespace Parser {
-using Preparser::preparse, Preparser::split_by_statements;
-std::ostream& operator<<(std::ostream& stream, const ASTNode& op) {
-	if (op._name == "{") {
-		if (op._args.size() == 0)
-			ERROR("Scope parsed wrong");
-		stream << "{ ";
-		for (size_t i = 0; i < op._args.size() - 1; i++)
-			stream << *op._args[i] << " ; ";
-		stream << *op._args.back() << " }";
-		return stream;
-	}
-	for (const ASTNode* arg: op._args)
-		stream << *arg << ' ';
-	if (op._args.size() == 1 && (op._name == "+" || op._name == "-"))
-		stream << 'u';
-	stream << (op._name == "" ? "()" : op._name.get());
-	if (op._name == "fn") {
-		FnMeta* meta = reinterpret_cast<FnMeta*>(op._metadata);
-		if (meta == nullptr)
-			ERROR("Unexpected nullptr");
-		stream << ' ' << meta->_name.get() << '(';
-		if (meta->_args.empty()) {
-			stream << ')';
-		} else {
-			stream << meta->_args.front().get();
-			for (const Lexer::Token& arg: meta->_args)
-				stream << ", " << arg.get();
-			stream << ')';
-		}
-	}
-	return stream;
+std::ostream& operator<<(std::ostream& stream, const ASTNode& node) {
+	stream << node._name.get() << '(';
+	stream << node._args.size();
+	return stream << ')';
 }
-AST::AST(size_t statement_amount) : _statements() {
-	_statements.reserve(statement_amount);
+Symbol*       parse(Symbol* const* begin, Symbol* const* end) {
+  using Operators::Type;
+  if (begin >= end) {
+    ERROR("Missing expression");
+    return nullptr;
+  }
+  if (begin == end - 1) {
+    return *begin;
+  }
+  Symbol* const* max = begin;
+  for (Symbol* const* current = begin; current < end; current++) {
+    ParsingNode& max_node     = (*max)->get_parsing_node();
+    ParsingNode& current_node = (*current)->get_parsing_node();
+    const bool   is_max_invalid{max_node._op_type == Type::none || (max_node._op_type == Type::prefix && max != begin)
+                              || (max_node._op_type == Type::postfix && max != end - 1)};
+    const bool   is_current_valid{current_node._op_type == Type::infix
+                                || (current_node._op_type == Type::prefix && current == begin)
+                                || (current_node._op_type == Type::postfix && current == end - 1)};
+    const bool   is_current_better{current_node.precedence().value_or(0) > max_node.precedence().value_or(0)
+                                 || (current_node.precedence().value_or(0) == max_node.precedence().value_or(0)
+                                     && current_node.precedence().value_or(0) % 2 == 1)};
+    if (is_max_invalid || (is_current_valid && is_current_better))
+      max = current;
+  }
+  ASTNode& op = (*max)->get_ast_node();
+  if ((*max)->get_parsing_node()._op_type == Type::infix || (*max)->get_parsing_node()._op_type == Type::postfix) {
+    op._args.push_back(parse(begin, max));
+  }
+  if ((*max)->get_parsing_node()._op_type == Type::infix || (*max)->get_parsing_node()._op_type == Type::prefix) {
+    op._args.push_back(parse(max + 1, end));
+  }
+  return *max;
 }
-void AST::add_statement(const std::vector<ParsingNode>& expression) {
-	_statements.emplace_back(parse(expression.data(), expression.data() + expression.size()));
-}
-std::ostream& operator<<(std::ostream& stream, const AST& ast) {
-	for (const ASTNode* root: ast._statements)
-		stream << *root << '\n';
-	stream << ast._symbols;
-	return stream;
-}
-ASTNode::~ASTNode() {
-	for (ASTNode* node: _args)
-		delete node;
-}
-AST::~AST() {
-	for (ASTNode* node: _statements)
-		delete node;
-}
-ASTNode* parse(const ParsingNode* begin, const ParsingNode* end) {
-	using Operators::Type;
-	if (begin >= end) {
-		return new ASTNode("0");
-	}
-	if (begin == end - 1) {
-		if (begin->_keyword_data != nullptr)
-			return begin->_keyword_data->parse_keyword();
-		if (begin->_op_type == Type::none)
-			return new ASTNode(begin->_token);
-		ERROR("Syntax Error");
-	}
-	const ParsingNode* max = begin;
-	for (const ParsingNode* current = begin; current < end; current++) {
-		const bool is_max_invalid{max->_op_type == Type::none || (max->_op_type == Type::prefix && max != begin)
-		                          || (max->_op_type == Type::postfix && max != end - 1)};
-		const bool is_current_valid{current->_op_type == Type::infix
-		                            || (current->_op_type == Type::prefix && current == begin)
-		                            || (current->_op_type == Type::postfix && current == end - 1)};
-		const bool is_current_better{current->precedence().value_or(0) > max->precedence().value_or(0)
-		                             || (current->precedence().value_or(0) == max->precedence().value_or(0)
-		                                 && current->precedence().value_or(0) % 2 == 1)};
-		if (is_max_invalid || (is_current_valid && is_current_better))
-			max = current;
-	}
-	ASTNode* op = new ASTNode(max->_token);
-	if (max->_op_type == Type::infix || max->_op_type == Type::postfix)
-		op->_args.emplace_back(parse(begin, max));
-	if (max->_op_type == Type::infix || max->_op_type == Type::prefix)
-		op->_args.emplace_back(parse(max + 1, end));
-	return op;
-}
-std::unique_ptr<AST> run(const std::vector<Lexer::Token>& code) {
-	std::vector<std::vector<Lexer::Token>> lines = split_by_statements(code);
-	std::unique_ptr<AST>                   ast   = std::make_unique<AST>(lines.size());
-	for (std::vector<Lexer::Token>& line: lines) {
-		if (line.back() != ";")
-			ERROR("Missing semicolon");
-		line.pop_back();
-		std::vector<ParsingNode> preparsed = preparse(line.data(), line.data() + line.size(), ast->get_symbol_table());
-		ast->add_statement(preparsed);
-	}
-	return ast;
+ASTNode* run(Symbol* symbol) {
+	ParsingNode& node = symbol->get_parsing_node();
+	if (node._keyword_data != nullptr)
+		return node._keyword_data->parse_keyword(symbol);
+	return new ASTNode(node._token);
 }
 }; // namespace Parser

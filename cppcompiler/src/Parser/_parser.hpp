@@ -1,58 +1,32 @@
 #pragma once
 #include "../Lexer/_lexer.hpp"
 #include "../Preparser/_preparser.hpp"
-#include "symboltable.hpp"
-#include <iostream>
+#include "../symboltable.hpp"
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Value.h>
-#include <memory>
+#include <iostream>
+#include <ostream>
 #include <vector>
 namespace Parser {
 using Preparser::ParsingNode;
 struct FnMeta {
-	Lexer::Token              _name;
-	std::vector<Lexer::Token> _args;
-	SymbolTable&              _symbols;
-	inline FnMeta(const Lexer::Token& name, const std::vector<Lexer::Token> args, SymbolTable& symbols) :
-	    _name(name), _args(args), _symbols(symbols) {}
+	Lexer::Token              _name{};
+	std::vector<Lexer::Token> _args{};
 };
 struct LetMeta {
-	Lexer::Token _name;
-	SymbolTable& _symbols;
-	inline LetMeta(const Lexer::Token& name, SymbolTable& symbols) : _name(name), _symbols(symbols) {}
-};
-struct ReferenceMeta {
-	Lexer::Token _name;
-	SymbolTable& _symbols;
-	inline ReferenceMeta(const Lexer::Token& name, SymbolTable& symbols) : _name(name), _symbols(symbols) {}
+	Lexer::Token _name{};
 };
 struct ASTNode {
-	Lexer::Token          _name;
-	void*                 _metadata{nullptr};
-	std::vector<ASTNode*> _args{};
-	inline ASTNode(const Lexer::Token& op) : _name(op), _args() {}
+	Lexer::Token         _name{};
+	std::vector<Symbol*> _args{};
+	void*                _metadata{nullptr};
+	inline ASTNode(const Lexer::Token& op) : _name(op), _args(), _metadata(nullptr) {}
 	inline ASTNode(ASTNode&& operation) :
-	    _name(operation._name), _metadata(operation._metadata), _args(std::move(operation._args)) {}
-	~ASTNode();
-	friend std::ostream& operator<<(std::ostream& stream, const ASTNode& op);
-};
-class AST {
-	std::vector<ASTNode*> _statements{};
-	SymbolTable           _symbols{nullptr};
+	    _name(operation._name), _args(std::move(operation._args)), _metadata(operation._metadata) {}
 
-public:
-	AST(size_t statement_amount);
-	~AST();
-	void                      add_statement(const std::vector<ParsingNode>& expression);
-	friend std::ostream&      operator<<(std::ostream& stream, const AST& ast);
-	inline const SymbolTable& get_symbol_table() const {
-		return _symbols;
-	}
-	inline SymbolTable& get_symbol_table() {
-		return _symbols;
-	}
+	friend std::ostream& operator<<(std::ostream& stream, const ASTNode& node);
 };
-ASTNode* parse(const ParsingNode* begin, const ParsingNode* end);
+Symbol* parse(Symbol* const* begin, Symbol* const* end);
 // Main function of the parser
-std::unique_ptr<AST> run(const std::vector<Lexer::Token>& code);
+ASTNode* run(Symbol* symbol);
 } // namespace Parser

@@ -1,5 +1,8 @@
 #pragma once
-#include "../CodeGenerator/_codegenerator.hpp"
+#include "../module.hpp"
 namespace LlvmInterface {
-void run(const CodeGenerator::LlvmState& llvm_state);
-}
+void init();
+void assemble(const char* filepath, IrFile& file);
+void compile(const char* filepath, IrFile& file);
+void link(const char* filepath, ObjFile& file);
+} // namespace LlvmInterface
