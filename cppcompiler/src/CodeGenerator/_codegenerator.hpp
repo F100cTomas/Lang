@@ -95,6 +95,7 @@ LLVMNode*     add_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* fun
 LLVMNode*     sub_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function);
 LLVMNode*     u_plus_gen(Symbol* symbol, LLVMState& state, LLVMFunction* function);
 LLVMNode*     u_minus_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function);
+LLVMNode*     let_gen(Symbol* symbol, LLVMState& state, LLVMFunction* function);
 LLVMNode*     scope_gen(Symbol* symbol, LLVMState& state, LLVMFunction* function);
 LLVMFunction* function_gen(Symbol* symbol, LLVMState& state);
 LLVMNode*     run(Symbol* symbol, LLVMState& state, LLVMFunction* function);

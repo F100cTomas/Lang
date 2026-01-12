@@ -15,6 +15,16 @@ constexpr uint64_t hashfn(const char* str) {
 	return hash;
 }
 } // namespace
+Symbol::Symbol(SymbolTable& table, Preparser::ParsingNode& parsing_node) :
+    _table(&table), _parsing_node(&parsing_node) {
+	table.register_symbol(this);
+}
+Symbol::Symbol(SymbolTable& table, Parser::ASTNode& ast_node) : _table(&table), _ast_node(&ast_node) {
+	table.register_symbol(this);
+}
+Symbol::Symbol(SymbolTable& table, CodeGenerator::LLVMNode& llvm_node) : _table(&table), _llvm_node(&llvm_node) {
+	table.register_symbol(this);
+}
 Symbol::~Symbol() {}
 std::ostream& operator<<(std::ostream& stream, const Symbol& symbol) {
 	if (symbol._parsing_node != nullptr)

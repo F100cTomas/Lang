@@ -71,12 +71,11 @@ struct ParsingNode {
 	Operators::Type _op_type{Operators::Type::none};
 	KeywordData*    _keyword_data{nullptr};
 	inline Symbol*  make_symbol(SymbolTable& symbol_table) {
-    Symbol* symbol = new Symbol(*this);
-    symbol_table.register_symbol(symbol);
+    Symbol* symbol = new Symbol(symbol_table, *this);
     return symbol;
 	}
 	inline Symbol*  make_named_symbol(SymbolTable& symbol_table, const Lexer::Token& name) {
-    Symbol* symbol = new Symbol(*this);
+    Symbol* symbol = new Symbol(symbol_table, *this);
     symbol_table.register_named_symbol(symbol, name);
     return symbol;
 	}

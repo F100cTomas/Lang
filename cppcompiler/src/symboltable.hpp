@@ -2,6 +2,7 @@
 #include "Lexer/_lexer.hpp"
 #include <iostream>
 #include <vector>
+class SymbolTable;
 namespace Preparser {
 struct ParsingNode;
 }
@@ -14,6 +15,7 @@ struct LLVMNode;
 class LLVMState;
 } // namespace CodeGenerator
 class Symbol {
+	SymbolTable*                 _table{nullptr};
 	Preparser::ParsingNode*      _parsing_node{nullptr};
 	Parser::ASTNode*             _ast_node{nullptr};
 	CodeGenerator::LLVMNode*     _llvm_node{nullptr};
@@ -21,9 +23,12 @@ class Symbol {
 	Symbol*                      _successor{nullptr};
 
 public:
-	inline Symbol(Preparser::ParsingNode& parsing_node) : _parsing_node(&parsing_node) {}
-	inline Symbol(Parser::ASTNode& ast_node) : _ast_node(&ast_node) {}
-	inline Symbol(CodeGenerator::LLVMNode& llvm_node) : _llvm_node(&llvm_node) {}
+	Symbol(SymbolTable& table, Preparser::ParsingNode& parsing_node);
+	Symbol(SymbolTable& table, Parser::ASTNode& ast_node);
+	Symbol(SymbolTable& table, CodeGenerator::LLVMNode& llvm_node);
+	inline SymbolTable& get_table() {
+		return *_table;
+	}
 	inline void be_suceeded_by(Symbol* successor) {
 		_successor = successor;
 	}

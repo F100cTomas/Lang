@@ -37,38 +37,37 @@ LLVMNode* putchar{nullptr};
 LLVMNode* get_putchar(LLVMState& state) {
 	if (putchar != nullptr)
 		return putchar;
-	LLVMFunction* fn = new LLVMFunction(state, "putchar");;
+	LLVMFunction* fn = new LLVMFunction(state, "putchar");
+	;
 	Argument*   c_arg = fn->_fn->getArg(0);
 	AllocaInst* ptr   = fn->_builder->CreateAlloca(Type::getInt64Ty(state.context()));
 	ptr->setAlignment(Align(8));
 	fn->_builder->CreateStore(c_arg, ptr)->setAlignment(Align(8));
-	#ifdef __linux__
-	FunctionType* asm_type = FunctionType::get(Type::getVoidTy(state.context()), {PointerType::get(state.context(), 0)}, false);
-	InlineAsm*    asm_fn   = InlineAsm::get(asm_type,
-											("mov $$1, %rax; "
-											"mov $$1, %rdi; "
-											"mov $0, %rsi; "
-											"mov $$1, %rdx; "
-											"syscall"),
-										 "r,~{rax},~{rdi},~{rsi},~{rdx},~{rcx},~{r11},~{memory}", true);
+#ifdef __linux__
+	FunctionType* asm_type =
+	    FunctionType::get(Type::getVoidTy(state.context()), {PointerType::get(state.context(), 0)}, false);
+	InlineAsm* asm_fn = InlineAsm::get(asm_type,
+	                                   ("mov $$1, %rax; "
+	                                    "mov $$1, %rdi; "
+	                                    "mov $0, %rsi; "
+	                                    "mov $$1, %rdx; "
+	                                    "syscall"),
+	                                   "r,~{rax},~{rdi},~{rsi},~{rdx},~{rcx},~{r11},~{memory}", true);
 	fn->_builder->CreateCall(asm_fn, {ptr});
-	#elif defined(__MINGW64__)
-	FunctionType* GetStdHandle_type =
-	FunctionType::get(PointerType::get(context, 0), {Type::getInt32Ty(context)}, false);
-	Function* GetStdHandle =
-	Function::Create(GetStdHandle_type, GlobalValue::ExternalLinkage, "GetStdHandle", module);
+#elif defined(__MINGW64__)
+	FunctionType* GetStdHandle_type = FunctionType::get(PointerType::get(context, 0), {Type::getInt32Ty(context)}, false);
+	Function* GetStdHandle = Function::Create(GetStdHandle_type, GlobalValue::ExternalLinkage, "GetStdHandle", module);
 	FunctionType* WriteConsoleA_type =
-	FunctionType::get(Type::getInt8Ty(context),
-					  {PointerType::get(context, 0), PointerType::get(context, 0), Type::getInt32Ty(context),
-						  PointerType::get(context, 0), PointerType::get(context, 0)},
-					  false);
-	Function* WriteConsoleA =
-	Function::Create(WriteConsoleA_type, GlobalValue::ExternalLinkage, "WriteConsoleA", module);
-	Value* null_ptr = ConstantPointerNull::get(PointerType::get(context, 0));
+	    FunctionType::get(Type::getInt8Ty(context),
+	                      {PointerType::get(context, 0), PointerType::get(context, 0), Type::getInt32Ty(context),
+	                       PointerType::get(context, 0), PointerType::get(context, 0)},
+	                      false);
+	Function* WriteConsoleA = Function::Create(WriteConsoleA_type, GlobalValue::ExternalLinkage, "WriteConsoleA", module);
+	Value*    null_ptr      = ConstantPointerNull::get(PointerType::get(context, 0));
 	builder.CreateCall(WriteConsoleA,
-					   {builder.CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(context), -11)}), ptr,
-					   ConstantInt::get(Type::getInt32Ty(context), 1), null_ptr, null_ptr});
-	#endif
+	                   {builder.CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(context), -11)}), ptr,
+	                    ConstantInt::get(Type::getInt32Ty(context), 1), null_ptr, null_ptr});
+#endif
 	fn->_builder->CreateRet(ConstantInt::get(Type::getInt64Ty(state.context()), 0));
 	putchar = new LLVMNode(fn);
 	return putchar;
@@ -119,6 +118,11 @@ LLVMState::~LLVMState() {
 	delete _context;
 	*/
 }
+LLVMNode* let_gen(Symbol* symbol, LLVMState& state, LLVMFunction* function) {
+	// function->_alloca_builder->CreateAlloca(Type::getInt64Ty(state.context()));
+	return new LLVMNode(
+	    new LLVMValue{symbol->get_ast_node()._args.front()->get_llvm_node(state, function).get_val()->_value, function});
+}
 LLVMNode* scope_gen(Symbol* symbol, LLVMState& state, LLVMFunction* function) {
 	Parser::ASTNode& node = symbol->get_ast_node();
 	for (Symbol* arg: node._args)
@@ -139,6 +143,7 @@ LLVMNode* run(Symbol* symbol, LLVMState& state, LLVMFunction* function) {
 	Parser::ASTNode& node = symbol->get_ast_node();
 	switch (hashfn(node._name)) {
 	case hashfn("putchar"): return get_putchar(state);
+	case hashfn("let"): return let_gen(symbol, state, function);
 	case hashfn("fn"): return new LLVMNode(function_gen(symbol, state));
 	case hashfn("{"): return scope_gen(symbol, state, function);
 	case hashfn("+"):
@@ -152,6 +157,8 @@ LLVMNode* run(Symbol* symbol, LLVMState& state, LLVMFunction* function) {
 	}
 	if (*node._name.get() >= '0' && *node._name.get() <= '9')
 		return new LLVMNode(new LLVMValue{ConstantInt::get(Type::getInt64Ty(state.context()), std::atoi(node._name))});
-	return new LLVMNode(new LLVMValue{ConstantInt::get(Type::getInt64Ty(state.context()), 0), function});
+	Symbol* successor = symbol->get_table()[node._name];
+	symbol->be_suceeded_by(successor);
+	return &successor->get_llvm_node(state, function);
 }
 } // namespace CodeGenerator
