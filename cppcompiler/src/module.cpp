@@ -1,13 +1,13 @@
-#include "LlvmInterface/_llvminterface.hpp"
-#include <filesystem>
 #ifdef __MINGW64__
 #include <windows.h>
 #undef ERROR
 #endif
+#include "LlvmInterface/_llvminterface.hpp"
 #include "CodeGenerator/_codegenerator.hpp"
 #include "Lexer/_lexer.hpp"
 #include "Preparser/_preparser.hpp"
 #include "module.hpp"
+#include <filesystem>
 #include <fstream>
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/Type.h>
@@ -37,6 +37,9 @@ std::string tmpfilename() {
 }
 } // namespace
 AsmFile::AsmFile(IrFile& file) : _filepath(tmpfilename()) {
+#ifdef __MINGW64__
+	_filepath += ".asm";
+#endif
 	LlvmInterface::assemble(_filepath.c_str(), file);
 }
 AsmFile::~AsmFile() {
@@ -54,6 +57,9 @@ std::ostream& operator<<(std::ostream& stream, const AsmFile& asm_file) {
 	return stream;
 }
 ExeFile::ExeFile(ObjFile& file) : _filepath(tmpfilename()) {
+#ifdef __MINGW64__
+	_filepath += ".exe";
+#endif
 	LlvmInterface::link(_filepath.c_str(), file);
 }
 ExeFile::~ExeFile() {
@@ -67,6 +73,9 @@ void ExeFile::commit(const char* filepath) {
 	_is_commited = true;
 }
 ObjFile::ObjFile(IrFile& file) : _filepath(tmpfilename()) {
+#ifdef __MINGW64__
+	_filepath += ".obj";
+#endif
 	LlvmInterface::compile(_filepath.c_str(), file);
 }
 ObjFile::~ObjFile() {

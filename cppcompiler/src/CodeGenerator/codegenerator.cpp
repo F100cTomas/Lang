@@ -55,18 +55,18 @@ LLVMNode* get_putchar(LLVMState& state) {
 	                                   "r,~{rax},~{rdi},~{rsi},~{rdx},~{rcx},~{r11},~{memory}", true);
 	fn->_builder->CreateCall(asm_fn, {ptr});
 #elif defined(__MINGW64__)
-	FunctionType* GetStdHandle_type = FunctionType::get(PointerType::get(context, 0), {Type::getInt32Ty(context)}, false);
-	Function* GetStdHandle = Function::Create(GetStdHandle_type, GlobalValue::ExternalLinkage, "GetStdHandle", module);
+	FunctionType* GetStdHandle_type = FunctionType::get(PointerType::get(state.context(), 0), {Type::getInt32Ty(state.context())}, false);
+	Function* GetStdHandle = Function::Create(GetStdHandle_type, GlobalValue::ExternalLinkage, "GetStdHandle", state.module());
 	FunctionType* WriteConsoleA_type =
-	    FunctionType::get(Type::getInt8Ty(context),
-	                      {PointerType::get(context, 0), PointerType::get(context, 0), Type::getInt32Ty(context),
-	                       PointerType::get(context, 0), PointerType::get(context, 0)},
+	    FunctionType::get(Type::getInt8Ty(state.context()),
+	                      {PointerType::get(state.context(), 0), PointerType::get(state.context(), 0), Type::getInt32Ty(state.context()),
+	                       PointerType::get(state.context(), 0), PointerType::get(state.context(), 0)},
 	                      false);
-	Function* WriteConsoleA = Function::Create(WriteConsoleA_type, GlobalValue::ExternalLinkage, "WriteConsoleA", module);
-	Value*    null_ptr      = ConstantPointerNull::get(PointerType::get(context, 0));
-	builder.CreateCall(WriteConsoleA,
-	                   {builder.CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(context), -11)}), ptr,
-	                    ConstantInt::get(Type::getInt32Ty(context), 1), null_ptr, null_ptr});
+	Function* WriteConsoleA = Function::Create(WriteConsoleA_type, GlobalValue::ExternalLinkage, "WriteConsoleA", state.module());
+	Value*    null_ptr      = ConstantPointerNull::get(PointerType::get(state.context(), 0));
+	fn->_builder->CreateCall(WriteConsoleA,
+	                   {fn->_builder->CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(state.context()), -11)}), ptr,
+	                    ConstantInt::get(Type::getInt32Ty(state.context()), 1), null_ptr, null_ptr});
 #endif
 	fn->_builder->CreateRet(ConstantInt::get(Type::getInt64Ty(state.context()), 0));
 	putchar = new LLVMNode(fn);
@@ -75,7 +75,13 @@ LLVMNode* get_putchar(LLVMState& state) {
 } // namespace
 LLVMFunction::LLVMFunction(LLVMState& state, const Lexer::Token& name) {
 	FunctionType* type = FunctionType::get(Type::getInt64Ty(state.context()), {Type::getInt64Ty(state.context())}, false);
-	_fn                = Function::Create(type, GlobalValue::ExternalLinkage, name.get(), state.module());
+	_fn                = Function::Create(type, GlobalValue::ExternalLinkage, 
+#ifdef __MINGW64__
+	(name == "main" ? "lang_main" : name.get())
+#else
+	name.get()
+#endif
+, state.module());
 	_block             = BasicBlock::Create(state.context(), "", _fn);
 	_alloca_builder    = new IRBuilder<>(_block, _block->begin());
 	_builder           = new IRBuilder<>(_block);
@@ -105,10 +111,10 @@ void LLVMState::add_exit_syscall(llvm::Value* code) {
 	InlineAsm*    exit      = InlineAsm::get(exit_type, "mov $0, %rdi; mov $$60, %rax; syscall", "r", true);
 	_entry->_builder->CreateCall(exit, {code});
 #elif defined(__MINGW64__)
-	FunctionType* exit_type = FunctionType::get(Type::getVoidTy(context), {Type::getInt32Ty(context)}, false);
-	Function*     exit      = Function::Create(exit_type, GlobalValue::ExternalLinkage, "ExitProcess", module);
+	FunctionType* exit_type = FunctionType::get(Type::getVoidTy(*_context), {Type::getInt32Ty(*_context)}, false);
+	Function*     exit      = Function::Create(exit_type, GlobalValue::ExternalLinkage, "ExitProcess", *_module);
 	exit->setDoesNotReturn();
-	_entry->_builder.CreateCall(exit, {_entry->_builder->CreateTrunc(code, Type::getInt32Ty(*_context))});
+	_entry->_builder->CreateCall(exit, {_entry->_builder->CreateTrunc(code, Type::getInt32Ty(*_context))});
 #endif
 	_entry->_builder->CreateUnreachable();
 }
