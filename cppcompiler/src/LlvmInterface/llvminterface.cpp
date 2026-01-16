@@ -37,7 +37,11 @@ void assemble(const char* filepath, IrFile& file) {
 	if (!target)
 		ERROR(error1);
 	llvm::TargetOptions  opt;
+#ifdef __MINGW64__
+	llvm::Triple         triple{"x86_64-pc-windows-msvc"};
+#else
 	llvm::Triple         triple{triple_string};
+#endif
 	llvm::TargetMachine* machine = target->createTargetMachine(triple, "generic", "", opt, {});
 	file.module().setDataLayout(machine->createDataLayout());
 	std::error_code      error2;
@@ -58,7 +62,11 @@ void compile(const char* filepath, IrFile& file) {
 	if (!target)
 		ERROR(error1);
 	llvm::TargetOptions  opt;
+#ifdef __MINGW64__
+	llvm::Triple         triple{"x86_64-pc-windows-msvc"};
+#else
 	llvm::Triple         triple{triple_string};
+#endif
 	llvm::TargetMachine* machine = target->createTargetMachine(triple, "generic", "", opt, {});
 	file.module().setDataLayout(machine->createDataLayout());
 	std::error_code      error2;
@@ -79,7 +87,7 @@ void link(const char* filepath, ObjFile& file) {
 	cmd += file.get_path();
 	cmd += " /out:\"";
 	cmd += filepath;
-	cmd += "\" /SUBSYSTEM:CONSOLE kernel32.lib";
+	cmd += "\" /NODEFAULTLIB /ENTRY:_start /SUBSYSTEM:CONSOLE kernel32.lib";
 	std::cout << cmd << std::endl;
 	system(cmd.c_str());
 #endif

@@ -16,11 +16,6 @@
 #include <memory>
 #include <ostream>
 #include <string>
-#ifdef __linux__
-#define START_SYMBOL "_start"
-#elif defined(__MINGW64__)
-#define START_SYMBOL "mainCRTStartup"
-#endif
 namespace CodeGenerator {
 using namespace llvm;
 using std::unique_ptr, std::make_unique;
@@ -75,13 +70,7 @@ LLVMNode* get_putchar(LLVMState& state) {
 } // namespace
 LLVMFunction::LLVMFunction(LLVMState& state, const Lexer::Token& name) {
 	FunctionType* type = FunctionType::get(Type::getInt64Ty(state.context()), {Type::getInt64Ty(state.context())}, false);
-	_fn                = Function::Create(type, GlobalValue::ExternalLinkage, 
-#ifdef __MINGW64__
-	(name == "main" ? "lang_main" : name.get())
-#else
-	name.get()
-#endif
-, state.module());
+	_fn                = Function::Create(type, GlobalValue::ExternalLinkage, name.get(), state.module());
 	_block             = BasicBlock::Create(state.context(), "", _fn);
 	_alloca_builder    = new IRBuilder<>(_block, _block->begin());
 	_builder           = new IRBuilder<>(_block);
@@ -100,7 +89,7 @@ std::ostream& operator<<(std::ostream& stream, const LLVMValue& val) {
 }
 LLVMState::LLVMState() : _context(new LLVMContext()) {
 	_module = new Module("Program", *_context);
-	_entry  = new LLVMFunction(*this, START_SYMBOL);
+	_entry  = new LLVMFunction(*this, "_start");
 	_entry->_fn->setDoesNotReturn();
 	_entry->_fn->setCallingConv(CallingConv::C);
 	// Create exit syscall
