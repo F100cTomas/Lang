@@ -13,6 +13,7 @@
 #include <llvm/IR/Type.h>
 #include <llvm/Support/raw_ostream.h>
 #include <sstream>
+#include <fstream>
 namespace {
 std::string tmpfilename() {
 #ifdef __linux__
@@ -50,7 +51,8 @@ void AsmFile::commit(const char* filepath) {
 	_is_commited = true;
 }
 std::ostream& operator<<(std::ostream& stream, const AsmFile& asm_file) {
-	stream << "operator<< not implemented";
+	std::ifstream file{asm_file._filepath};
+	stream << file.rdbuf();
 	return stream;
 }
 ExeFile::ExeFile(ObjFile& file) : _filepath(tmpfilename()) {

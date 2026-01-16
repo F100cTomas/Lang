@@ -3,6 +3,7 @@ cppcompiler/.build/
 cppcompiler/lang
 cppcompiler/lang.exe
 cppcompiler/program
+cppcompiler/program.a
 cppcompiler/program.exe
 cppcompiler/kernel32.lib
 doc/*

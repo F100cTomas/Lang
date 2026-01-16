@@ -18,7 +18,7 @@
 LLD_HAS_DRIVER(elf)
 LLD_HAS_DRIVER(coff)
 namespace LlvmInterface {
-bool initialized = false;
+static bool initialized = false;
 void init() {
 	if (initialized)
 		return;
