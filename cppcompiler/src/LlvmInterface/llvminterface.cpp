@@ -76,8 +76,10 @@ void link(const char* filepath, ObjFile& file) {
 	lld::lldMain({"ld.lld", file.get_path(), "-o", filepath}, llvm::outs(), llvm::errs(), {{lld::Gnu, &lld::elf::link}});
 #elif defined(__MINGW64__)
 	std::string cmd = "lld-link.exe ";
+	cmd += file.get_path();
+	cmd += " /out:\"";
 	cmd += filepath;
-	cmd += " /out:program.exe /SUBSYSTEM:CONSOLE kernel32.lib";
+	cmd += "\" /SUBSYSTEM:CONSOLE kernel32.lib";
 	std::cout << cmd << std::endl;
 	system(cmd.c_str());
 #endif
