@@ -1,5 +1,6 @@
 #include "../error.hpp"
 #include "_codegenerator.hpp"
+#include <cstdint>
 #include <llvm/IR/Argument.h>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/CallingConv.h>
@@ -13,31 +14,28 @@
 #include <llvm/IR/Value.h>
 #include <llvm/Support/Alignment.h>
 #include <llvm/Support/raw_ostream.h>
-#include <memory>
-#include <ostream>
-#include <string>
+#include <vector>
 namespace CodeGenerator {
 using namespace llvm;
-using std::unique_ptr, std::make_unique;
 namespace {
 constexpr uint64_t hashfn(const char* str) {
 	uint64_t hash = 14695981039346656037U;
 	while (*str) {
-		hash ^= static_cast<uint8_t>(*str++);
+		hash ^= (uint8_t)*str++;
 		hash *= 1099511628211U;
 	}
 	return hash;
 }
-LLVMNode* putchar{nullptr};
-LLVMNode* get_putchar(LLVMState& state) {
+LLVMFunction* putchar{nullptr};
+LLVMFunction* get_putchar(LLVMState& state) {
 	if (putchar != nullptr)
 		return putchar;
-	LLVMFunction* fn = new LLVMFunction(state, "putchar");
+	LLVMFunction* fn = new LLVMFunction("putchar", state);
 	;
-	Argument*   c_arg = fn->_fn->getArg(0);
-	AllocaInst* ptr   = fn->_builder->CreateAlloca(Type::getInt64Ty(state.context()));
+	Argument*   c_arg = fn->get()->getArg(0);
+	AllocaInst* ptr   = fn->builder().CreateAlloca(Type::getInt64Ty(state.context()));
 	ptr->setAlignment(Align(8));
-	fn->_builder->CreateStore(c_arg, ptr)->setAlignment(Align(8));
+	fn->builder().CreateStore(c_arg, ptr)->setAlignment(Align(8));
 #ifdef __linux__
 	FunctionType* asm_type =
 	    FunctionType::get(Type::getVoidTy(state.context()), {PointerType::get(state.context(), 0)}, false);
@@ -48,112 +46,238 @@ LLVMNode* get_putchar(LLVMState& state) {
 	                                    "mov $$1, %rdx; "
 	                                    "syscall"),
 	                                   "r,~{rax},~{rdi},~{rsi},~{rdx},~{rcx},~{r11},~{memory}", true);
-	fn->_builder->CreateCall(asm_fn, {ptr});
+	fn->builder().CreateCall(asm_fn, {ptr});
 #elif defined(__MINGW64__)
-	FunctionType* GetStdHandle_type = FunctionType::get(PointerType::get(state.context(), 0), {Type::getInt32Ty(state.context())}, false);
-	Function* GetStdHandle = Function::Create(GetStdHandle_type, GlobalValue::ExternalLinkage, "GetStdHandle", state.module());
-	FunctionType* WriteConsoleA_type =
-	    FunctionType::get(Type::getInt8Ty(state.context()),
-	                      {PointerType::get(state.context(), 0), PointerType::get(state.context(), 0), Type::getInt32Ty(state.context()),
-	                       PointerType::get(state.context(), 0), PointerType::get(state.context(), 0)},
-	                      false);
-	Function* WriteConsoleA = Function::Create(WriteConsoleA_type, GlobalValue::ExternalLinkage, "WriteConsoleA", state.module());
-	Value*    null_ptr      = ConstantPointerNull::get(PointerType::get(state.context(), 0));
-	fn->_builder->CreateCall(WriteConsoleA,
-	                   {fn->_builder->CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(state.context()), -11)}), ptr,
-	                    ConstantInt::get(Type::getInt32Ty(state.context()), 1), null_ptr, null_ptr});
+	FunctionType* GetStdHandle_type =
+	    FunctionType::get(PointerType::get(state.context(), 0), {Type::getInt32Ty(state.context())}, false);
+	Function* GetStdHandle =
+	    Function::Create(GetStdHandle_type, GlobalValue::ExternalLinkage, "GetStdHandle", state.module());
+	FunctionType* WriteConsoleA_type = FunctionType::get(
+	    Type::getInt8Ty(state.context()),
+	    {PointerType::get(state.context(), 0), PointerType::get(state.context(), 0), Type::getInt32Ty(state.context()),
+	     PointerType::get(state.context(), 0), PointerType::get(state.context(), 0)},
+	    false);
+	Function* WriteConsoleA =
+	    Function::Create(WriteConsoleA_type, GlobalValue::ExternalLinkage, "WriteConsoleA", state.module());
+	Value* null_ptr = ConstantPointerNull::get(PointerType::get(state.context(), 0));
+	fn->_builder->CreateCall(
+	    WriteConsoleA,
+	    {fn->_builder->CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(state.context()), -11)}), ptr,
+	     ConstantInt::get(Type::getInt32Ty(state.context()), 1), null_ptr, null_ptr});
 #endif
-	fn->_builder->CreateRet(ConstantInt::get(Type::getInt64Ty(state.context()), 0));
-	putchar = new LLVMNode(fn);
+	fn->finalize(ConstantInt::get(Type::getInt64Ty(state.context()), 0));
+	putchar = fn;
 	return putchar;
 }
+LLVMFunction* getchar{nullptr};
+LLVMFunction* get_getchar(LLVMState& state) {
+	if (getchar != nullptr)
+		return getchar;
+	LLVMFunction* fn = new LLVMFunction("getchar", state);
+	;
+	Argument*   c_arg = fn->get()->getArg(0);
+	AllocaInst* ptr   = fn->builder().CreateAlloca(Type::getInt64Ty(state.context()));
+	ptr->setAlignment(Align(8));
+	fn->builder().CreateStore(c_arg, ptr)->setAlignment(Align(8));
+#ifdef __linux__
+	FunctionType* asm_type =
+	    FunctionType::get(Type::getVoidTy(state.context()), {PointerType::get(state.context(), 0)}, false);
+	InlineAsm* asm_fn = InlineAsm::get(asm_type,
+	                                   ("mov $$0, %rax; "
+	                                    "mov $$1, %rdi; "
+	                                    "mov $0, %rsi; "
+	                                    "mov $$1, %rdx; "
+	                                    "syscall"),
+	                                   "r,~{rax},~{rdi},~{rsi},~{rdx},~{rcx},~{r11},~{memory}", true);
+	fn->builder().CreateCall(asm_fn, {ptr});
+	fn->finalize(fn->builder().CreateLoad(Type::getInt64Ty(state.context()), ptr));
+#elif defined(__MINGW64__)
+	FunctionType* GetStdHandle_type =
+	    FunctionType::get(PointerType::get(state.context(), 0), {Type::getInt32Ty(state.context())}, false);
+	Function* GetStdHandle =
+	    Function::Create(GetStdHandle_type, GlobalValue::ExternalLinkage, "GetStdHandle", state.module());
+	FunctionType* WriteConsoleA_type = FunctionType::get(
+	    Type::getInt8Ty(state.context()),
+	    {PointerType::get(state.context(), 0), PointerType::get(state.context(), 0), Type::getInt32Ty(state.context()),
+	     PointerType::get(state.context(), 0), PointerType::get(state.context(), 0)},
+	    false);
+	Function* WriteConsoleA =
+	    Function::Create(WriteConsoleA_type, GlobalValue::ExternalLinkage, "WriteConsoleA", state.module());
+	Value* null_ptr = ConstantPointerNull::get(PointerType::get(state.context(), 0));
+	fn->_builder->CreateCall(
+	    WriteConsoleA,
+	    {fn->_builder->CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(state.context()), -11)}), ptr,
+	     ConstantInt::get(Type::getInt32Ty(state.context()), 1), null_ptr, null_ptr});
+#endif
+	getchar = fn;
+	return getchar;
+}
+uint64_t new_llvm_state_id{0};
 } // namespace
-LLVMFunction::LLVMFunction(LLVMState& state, const Lexer::Token& name) {
-	FunctionType* type = FunctionType::get(Type::getInt64Ty(state.context()), {Type::getInt64Ty(state.context())}, false);
-	_fn                = Function::Create(type, GlobalValue::ExternalLinkage, name.get(), state.module());
-	_block             = BasicBlock::Create(state.context(), "", _fn);
-	_alloca_builder    = new IRBuilder<>(_block, _block->begin());
-	_builder           = new IRBuilder<>(_block);
+LLVMFunction::LLVMFunction(const char* name, LLVMState& state) : _data(nullptr), _state(state), _definition(nullptr) {
+	FunctionType* fn_type =
+	    FunctionType::get(Type::getInt64Ty(state.context()), {Type::getInt64Ty(state.context())}, false);
+	_data = Function::Create(fn_type, GlobalValue::ExternalLinkage, name, _state.module());
 }
-std::ostream& operator<<(std::ostream& stream, const LLVMFunction& fn) {
-	std::string        buffer{};
-	raw_string_ostream llvm_stream{buffer};
-	fn._fn->print(llvm_stream);
-	return stream << buffer;
+IRBuilder<>& LLVMFunction::builder() {
+	if (_definition != nullptr)
+		return _definition->_builder;
+	_definition = new LLVMDefinition(BasicBlock::Create(_state.context(), "", _data));
+	return _definition->_builder;
 }
-std::ostream& operator<<(std::ostream& stream, const LLVMValue& val) {
-	std::string        buffer{};
-	raw_string_ostream llvm_stream{buffer};
-	val._value->print(llvm_stream);
-	return stream << buffer;
+void LLVMFunction::finalize(Value* return_value) {
+	builder().CreateRet(return_value);
 }
-LLVMState::LLVMState() : _context(new LLVMContext()) {
+LLVMVariable::LLVMVariable(const char* name, LLVMState& state, IRBuilder<>* builder) :
+    _type(builder == nullptr ? ScopeType::global : ScopeType::local), _data(), _state(state) {
+	if (builder == nullptr) {
+		_data._global =
+		    new GlobalVariable(_state.module(), Type::getInt64Ty(_state.context()), false, GlobalValue::ExternalLinkage,
+		                       ConstantInt::get(Type::getInt64Ty(_state.context()), 0), name);
+		return;
+	}
+	_data._local = builder->CreateAlloca(Type::getInt64Ty(_state.context()), nullptr, name);
+}
+void LLVMVariable::finalize(IRBuilder<>& builder, Value* initializer) {
+	builder.CreateStore(initializer, get());
+}
+LLVMNode::LLVMNode(Symbol* symbol, LLVMState& state, LLVMNode* parent) :
+    _type(NodeType::none), _data(), _symbol(symbol), _parent(parent), _state(state), _is_finalized(false) {}
+void LLVMNode::finalize() {
+	if (_is_finalized)
+		return;
+	_is_finalized                   = true;
+	Parser::ASTNode&       ast_node = _symbol->get_ast_node();
+	std::vector<LLVMNode*> children{};
+	children.reserve(ast_node._args.size());
+	for (Symbol* child: ast_node._args)
+		children.push_back(&child->get_llvm_node(_state, this));
+	for (LLVMNode* child: children)
+		child->finalize();
+	if (_type == NodeType::fn) {
+		_data._fn->finalize(children.front()->get_value());
+		return;
+	}
+	if (_type == NodeType::let) {
+		_data._let->finalize(builder(), children.front()->get_value());
+		return;
+	}
+	if (*ast_node._name.get() >= '0' && *ast_node._name.get() <= '9') {
+		_data._val = ConstantInt::get(Type::getInt64Ty(_state.context()), atoi(ast_node._name));
+		return;
+	}
+	switch (hashfn(ast_node._name)) {
+	case hashfn("putchar"): {
+		_type     = NodeType::fn;
+		_data._fn = get_putchar(_state);
+	}
+		return;
+	case hashfn("getchar"): {
+		_type     = NodeType::fn;
+		_data._fn = get_getchar(_state);
+	}
+		return;
+	case hashfn("{"): _data._val = children.back()->get_value(); return;
+	default: break;
+	}
+	if (children.size() > 0) {
+		if (strlen(ast_node._name) <= 1)
+			_data._val = opgen(builder(), *ast_node._name.get(), children.size() >= 1 ? children[0] : nullptr,
+			                   children.size() >= 2 ? children[1] : nullptr, _state);
+		else if (ast_node._name.get()[1] == '=')
+			_data._val = opgen2(builder(), *ast_node._name.get(), children.size() >= 1 ? children[0] : nullptr,
+			                    children.size() >= 2 ? children[1] : nullptr, _state);
+		else
+			ERROR("Unknown operation: ", ast_node._name);
+		return;
+	}
+	Symbol* symbol = _symbol->get_table()[ast_node._name];
+	if (symbol == nullptr)
+		ERROR("Symbol not found: ", ast_node._name);
+	LLVMNode& node = symbol->get_llvm_node(_state, nullptr);
+	if (node._type == NodeType::fn) {
+		_type     = NodeType::fn;
+		_data._fn = node._data._fn;
+		return;
+	}
+	if (node._type == NodeType::let) {
+		_type      = NodeType::let;
+		_data._let = node._data._let;
+		return;
+	}
+	_data._val = node.get_value();
+}
+IRBuilder<>& LLVMNode::builder() {
+	if (_type == NodeType::fn)
+		return _data._fn->builder();
+	if (_parent == nullptr)
+		return _state.entry().builder();
+	return _parent->builder();
+}
+void LLVMNode::create_let() {
+	if (_type != NodeType::none)
+		ERROR("Attempted to overwrite node.");
+	_type                 = NodeType::let;
+	Parser::LetMeta& meta = *reinterpret_cast<Parser::LetMeta*>(_symbol->get_ast_node()._metadata);
+	_data._let            = new LLVMVariable(meta._name, _state, _parent == nullptr ? nullptr : &_parent->builder());
+}
+void LLVMNode::create_fn() {
+	if (_type != NodeType::none)
+		ERROR("Attempted to overwrite node.");
+	_type                = NodeType::fn;
+	Parser::FnMeta& meta = *reinterpret_cast<Parser::FnMeta*>(_symbol->get_ast_node()._metadata);
+	_data._fn            = new LLVMFunction(meta._name, _state);
+}
+Value* LLVMNode::get_value() {
+	if (_type == NodeType::fn)
+		ERROR("Invalid call.");
+	if (_type == NodeType::let)
+		return builder().CreateLoad(Type::getInt64Ty(_state.context()), get_variable());
+	if (_data._val == nullptr)
+		finalize();
+	return _data._val;
+}
+Function* LLVMNode::get_function() {
+	if (_type != NodeType::fn)
+		ERROR("Invalid call.");
+	return _data._fn->get();
+}
+Value* LLVMNode::get_variable() {
+	if (_type != NodeType::let)
+		ERROR("Invalid call.");
+	return _data._let->get();
+}
+std::ostream& operator<<(std::ostream& stream, const LLVMNode& node) {
+	stream << "Not yet implemented";
+	return stream;
+}
+LLVMState::LLVMState() : _context(new LLVMContext()), _module(nullptr), _entry(nullptr), _id(new_llvm_state_id++) {
 	_module = new Module("Program", *_context);
-	_entry  = new LLVMFunction(*this, "_start");
-	_entry->_fn->setDoesNotReturn();
-	_entry->_fn->setCallingConv(CallingConv::C);
-	// Create exit syscall
+	_entry  = new LLVMFunction("_start", *this);
+	_entry->get()->setDoesNotReturn();
+	_entry->get()->setCallingConv(CallingConv::C);
 }
+LLVMState::~LLVMState() {}
 void LLVMState::add_exit_syscall(llvm::Value* code) {
 #ifdef __linux__
 	FunctionType* exit_type = FunctionType::get(Type::getVoidTy(*_context), {Type::getInt64Ty(*_context)}, false);
 	InlineAsm*    exit      = InlineAsm::get(exit_type, "mov $0, %rdi; mov $$60, %rax; syscall", "r", true);
-	_entry->_builder->CreateCall(exit, {code});
+	_entry->builder().CreateCall(exit, {code});
 #elif defined(__MINGW64__)
 	FunctionType* exit_type = FunctionType::get(Type::getVoidTy(*_context), {Type::getInt32Ty(*_context)}, false);
 	Function*     exit      = Function::Create(exit_type, GlobalValue::ExternalLinkage, "ExitProcess", *_module);
 	exit->setDoesNotReturn();
 	_entry->_builder->CreateCall(exit, {_entry->_builder->CreateTrunc(code, Type::getInt32Ty(*_context))});
 #endif
-	_entry->_builder->CreateUnreachable();
+	_entry->builder().CreateUnreachable();
 }
-LLVMState::~LLVMState() {
-	/*
-	delete _module;
-	delete _context;
-	*/
-}
-LLVMNode* let_gen(Symbol* symbol, LLVMState& state, LLVMFunction* function) {
-	// function->_alloca_builder->CreateAlloca(Type::getInt64Ty(state.context()));
-	return new LLVMNode(
-	    new LLVMValue{symbol->get_ast_node()._args.front()->get_llvm_node(state, function).get_val()->_value, function});
-}
-LLVMNode* scope_gen(Symbol* symbol, LLVMState& state, LLVMFunction* function) {
-	Parser::ASTNode& node = symbol->get_ast_node();
-	for (Symbol* arg: node._args)
-		arg->get_llvm_node(state, function);
-	symbol->be_suceeded_by(node._args.back());
-	return &node._args.back()->get_llvm_node(state, function);
-}
-LLVMFunction* function_gen(Symbol* symbol, LLVMState& state) {
-	Parser::ASTNode& node = symbol->get_ast_node();
-	if (node._metadata == nullptr)
-		ERROR("Unexpected nullptr");
-	const Parser::FnMeta& meta = *reinterpret_cast<const Parser::FnMeta*>(node._metadata);
-	LLVMFunction*         fn   = new LLVMFunction(state, meta._name);
-	fn->_builder->CreateRet(node._args.front()->get_llvm_node(state, fn).get_val()->_value);
-	return fn;
-}
-LLVMNode* run(Symbol* symbol, LLVMState& state, LLVMFunction* function) {
-	Parser::ASTNode& node = symbol->get_ast_node();
-	switch (hashfn(node._name)) {
-	case hashfn("putchar"): return get_putchar(state);
-	case hashfn("let"): return let_gen(symbol, state, function);
-	case hashfn("fn"): return new LLVMNode(function_gen(symbol, state));
-	case hashfn("{"): return scope_gen(symbol, state, function);
-	case hashfn("+"):
-		return node._args.size() <= 1 ? u_plus_gen(symbol, state, function) : add_gen(node, state, function);
-	case hashfn("-"): return node._args.size() <= 1 ? u_minus_gen(node, state, function) : sub_gen(node, state, function);
-	case hashfn(""): return blank_gen(node, state, function);
-	case hashfn("*"): return mul_gen(node, state, function);
-	case hashfn("/"): return div_gen(node, state, function);
-	case hashfn("%"): return mod_gen(node, state, function);
+LLVMNode* run(Symbol* symbol, LLVMState& state, LLVMNode* parent) {
+	LLVMNode* result = new LLVMNode(symbol, state, parent);
+	switch (hashfn(symbol->get_ast_node()._name.get())) {
+	case hashfn("fn"): result->create_fn(); break;
+	case hashfn("let"): result->create_let(); break;
 	default: break;
 	}
-	if (*node._name.get() >= '0' && *node._name.get() <= '9')
-		return new LLVMNode(new LLVMValue{ConstantInt::get(Type::getInt64Ty(state.context()), std::atoi(node._name))});
-	Symbol* successor = symbol->get_table()[node._name];
-	symbol->be_suceeded_by(successor);
-	return &successor->get_llvm_node(state, function);
+	return result;
 }
 } // namespace CodeGenerator

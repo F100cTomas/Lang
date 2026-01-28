@@ -2,9 +2,9 @@
 #include <windows.h>
 #undef ERROR
 #endif
-#include "LlvmInterface/_llvminterface.hpp"
 #include "CodeGenerator/_codegenerator.hpp"
 #include "Lexer/_lexer.hpp"
+#include "LlvmInterface/_llvminterface.hpp"
 #include "Preparser/_preparser.hpp"
 #include "module.hpp"
 #include <filesystem>
@@ -13,7 +13,6 @@
 #include <llvm/IR/Type.h>
 #include <llvm/Support/raw_ostream.h>
 #include <sstream>
-#include <fstream>
 namespace {
 std::string tmpfilename() {
 #ifdef __linux__
@@ -121,19 +120,15 @@ Module::Module(const char* filepath) {
 }
 Module::~Module() {}
 IrFile Module::build() {
-	for (Symbol* symbol: _st) {
-		symbol->get_llvm_node(_state);
-	}
-	Symbol* main = _st["main"];
-	if (main != nullptr)
-		_state.add_exit_syscall(
-		    _state.entry()->_builder->CreateCall(main->get_llvm_node(_state).get_fn()->_fn,
-		                                         {llvm::ConstantInt::get(llvm::Type::getInt64Ty(_state.context()), 0)}));
+	CodeGenerator::LLVMNode& main = _st["main"]->get_llvm_node(_state, nullptr);
+	main.finalize();
+	_state.add_exit_syscall(_state.entry().builder().CreateCall(
+	    main.get_function(), {llvm::ConstantInt::get(llvm::Type::getInt64Ty(_state.context()), 0)}));
 	return _state;
 }
 IrFile Module::build(const std::vector<Lexer::Token>& symbol_names) {
 	for (const Lexer::Token& name: symbol_names) {
-		(void)_st[name]->get_llvm_node(_state);
+		_st[name]->get_llvm_node(_state, nullptr).finalize();
 	}
 	_state.add_exit_syscall(llvm::ConstantInt::get(llvm::Type::getInt64Ty(_state.context()), 0));
 	return _state;

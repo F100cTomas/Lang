@@ -25,6 +25,13 @@ constexpr std::optional<uint32_t> infix_operator_precedence(const Lexer::Token& 
 	case hashfn("+"):
 	case hashfn("-"): return 5;
 	case hashfn("^"): return 7;
+	case hashfn(">"):
+	case hashfn("<"):
+	case hashfn(">="):
+	case hashfn("<="):
+	case hashfn("!="):
+	case hashfn("=="): return 11;
+	case hashfn("="): return 13;
 	default: return {};
 	}
 }

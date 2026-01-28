@@ -1,6 +1,8 @@
 #pragma once
 #include "Lexer/_lexer.hpp"
+#include <cstdint>
 #include <iostream>
+#include <unordered_map>
 #include <vector>
 class SymbolTable;
 namespace Preparser {
@@ -10,28 +12,24 @@ namespace Parser {
 struct ASTNode;
 }
 namespace CodeGenerator {
-struct LLVMFunction;
-struct LLVMNode;
+class LLVMNode;
 class LLVMState;
 } // namespace CodeGenerator
 class Symbol {
-	SymbolTable*                 _table{nullptr};
-	Preparser::ParsingNode*      _parsing_node{nullptr};
-	Parser::ASTNode*             _ast_node{nullptr};
-	CodeGenerator::LLVMNode*     _llvm_node{nullptr};
-	CodeGenerator::LLVMFunction* _llvm_function{nullptr};
-	Symbol*                      _successor{nullptr};
+	SymbolTable*                                           _table{nullptr};
+	Preparser::ParsingNode*                                _parsing_node{nullptr};
+	Parser::ASTNode*                                       _ast_node{nullptr};
+	std::unordered_map<uint64_t, CodeGenerator::LLVMNode*> _llvm_nodes{};
+	Symbol*                                                _successor{nullptr};
 
 public:
 	Symbol(SymbolTable& table, Preparser::ParsingNode& parsing_node);
 	Symbol(SymbolTable& table, Parser::ASTNode& ast_node);
-	Symbol(SymbolTable& table, CodeGenerator::LLVMNode& llvm_node);
+	Symbol(SymbolTable& table, CodeGenerator::LLVMState& state, CodeGenerator::LLVMNode& llvm_node);
 	inline SymbolTable& get_table() {
 		return *_table;
 	}
-	inline void be_suceeded_by(Symbol* successor) {
-		_successor = successor;
-	}
+	void be_suceeded_by(Symbol* successor);
 	Symbol(const Symbol&) = delete;
 	~Symbol();
 	friend std::ostream& operator<<(std::ostream& stream, const Symbol& symbol);
@@ -39,8 +37,7 @@ public:
 public:
 	Preparser::ParsingNode&  get_parsing_node() const;
 	Parser::ASTNode&         get_ast_node();
-	CodeGenerator::LLVMNode& get_llvm_node(CodeGenerator::LLVMState& llvm_state, CodeGenerator::LLVMFunction* function);
-	CodeGenerator::LLVMNode& get_llvm_node(CodeGenerator::LLVMState& llvm_state);
+	CodeGenerator::LLVMNode& get_llvm_node(CodeGenerator::LLVMState& llvm_state, CodeGenerator::LLVMNode* parent);
 };
 class SymbolTable {
 	struct TableValue {

@@ -5,50 +5,48 @@
 #include <llvm/IR/GlobalValue.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/InlineAsm.h>
+#include <llvm/IR/InstrTypes.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Value.h>
 namespace CodeGenerator {
 using namespace llvm;
-LLVMNode* blank_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function) {
-	Function* left  = node._args[0]->get_llvm_node(state, function).get_fn()->_fn;
-	Value*    right = node._args[1]->get_llvm_node(state, function).get_val()->_value;
-	return new LLVMNode(new LLVMValue{function->_builder->CreateCall(left, {right}), function});
+Value* opgen(IRBuilder<>& builder, char op, LLVMNode* left, LLVMNode* right, LLVMState& state) {
+	switch (op) {
+	case '\0': return builder.CreateCall(left->get_function(), {right->get_value()});
+	case '*': return builder.CreateMul(left->get_value(), right->get_value());
+	case '/': return builder.CreateSDiv(left->get_value(), right->get_value());
+	case '%': return builder.CreateSRem(left->get_value(), right->get_value());
+	case '+':
+		if (right == nullptr)
+			return left->get_value();
+		return builder.CreateAdd(left->get_value(), right->get_value());
+	case '-':
+		if (right == nullptr)
+			return builder.CreateNeg(left->get_value());
+		return builder.CreateSub(left->get_value(), right->get_value());
+	case '=': return builder.CreateStore(right->get_value(), left->get_variable());
+	case '>':
+		return builder.CreateZExt(builder.CreateICmpSGT(left->get_value(), right->get_value()),
+		                          Type::getInt64Ty(state.context()));
+	case '<':
+		return builder.CreateZExt(builder.CreateICmpSLT(left->get_value(), right->get_value()),
+		                          Type::getInt64Ty(state.context()));
+	default: break;
+	}
+	ERROR("Unknown operation.");
+	return nullptr;
 }
-LLVMNode* mul_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function) {
-	Value* left  = node._args[0]->get_llvm_node(state, function).get_val()->_value;
-	Value* right = node._args[1]->get_llvm_node(state, function).get_val()->_value;
-	return new LLVMNode(new LLVMValue{function->_builder->CreateMul(left, right), function});
-}
-LLVMNode* div_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function) {
-	Value* left  = node._args[0]->get_llvm_node(state, function).get_val()->_value;
-	Value* right = node._args[1]->get_llvm_node(state, function).get_val()->_value;
-	return new LLVMNode(new LLVMValue{function->_builder->CreateSDiv(left, right), function});
-}
-LLVMNode* mod_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function) {
-	Value* left  = node._args[0]->get_llvm_node(state, function).get_val()->_value;
-	Value* right = node._args[1]->get_llvm_node(state, function).get_val()->_value;
-	return new LLVMNode(new LLVMValue{function->_builder->CreateSRem(left, right), function});
-}
-LLVMNode* add_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function) {
-	Value* left  = node._args[0]->get_llvm_node(state, function).get_val()->_value;
-	Value* right = node._args[1]->get_llvm_node(state, function).get_val()->_value;
-	return new LLVMNode(new LLVMValue{function->_builder->CreateAdd(left, right), function});
-}
-LLVMNode* sub_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function) {
-	Value* left  = node._args[0]->get_llvm_node(state, function).get_val()->_value;
-	Value* right = node._args[1]->get_llvm_node(state, function).get_val()->_value;
-	return new LLVMNode(new LLVMValue{function->_builder->CreateSub(left, right), function});
-}
-LLVMNode* u_plus_gen(Symbol* symbol, LLVMState& state, LLVMFunction* function) {
-	Parser::ASTNode& node = symbol->get_ast_node();
-	if (node._args.size() != 1)
-		ERROR("Wrong numer of arguments ", node._args.size());
-	Symbol* val = node._args.front();
-	symbol->be_suceeded_by(val);
-	return &val->get_llvm_node(state, function);
-}
-LLVMNode* u_minus_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function) {
-	Value* val = node._args.front()->get_llvm_node(state, function).get_val()->_value;
-	return new LLVMNode(new LLVMValue{function->_builder->CreateNeg(val), function});
+Value* opgen2(IRBuilder<>& builder, char op, LLVMNode* left, LLVMNode* right, LLVMState& state) {
+	ICmpInst::Predicate p;
+	switch (op) {
+	case '=': p = ICmpInst::ICMP_EQ; break;
+	case '!': p = ICmpInst::ICMP_NE; break;
+	case '>': p = ICmpInst::ICMP_SGE; break;
+	case '<': p = ICmpInst::ICMP_SLE; break;
+	default: ERROR("Unknown operation."); break;
+	}
+	return builder.CreateZExt(builder.CreateICmp(p, left->get_value(), right->get_value()),
+	                          Type::getInt64Ty(state.context()));
 }
 } // namespace CodeGenerator

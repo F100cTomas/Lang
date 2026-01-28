@@ -1,5 +1,5 @@
 fn main() : {
-        let x = (fn test() : 4) 0;
-        putchar (48 + x + x);
+	putchar ((2 != 2) + 48);
+	putchar 10;
 	0
-};
+	};

@@ -55,38 +55,38 @@ std::ostream& operator<<(std::ostream& stream, const ASTNode& node) {
 	stream << node._args.size();
 	return stream << ')';
 }
-Symbol*       parse(Symbol* const* begin, Symbol* const* end) {
-  using Operators::Type;
-  if (begin >= end) {
-    ERROR("Missing expression");
-    return nullptr;
-  }
-  if (begin == end - 1) {
-    return *begin;
-  }
-  Symbol* const* max = begin;
-  for (Symbol* const* current = begin; current < end; current++) {
-    ParsingNode& max_node     = (*max)->get_parsing_node();
-    ParsingNode& current_node = (*current)->get_parsing_node();
-    const bool   is_max_invalid{max_node._op_type == Type::none || (max_node._op_type == Type::prefix && max != begin)
+Symbol* parse(Symbol* const* begin, Symbol* const* end) {
+	using Operators::Type;
+	if (begin >= end) {
+		ERROR("Missing expression");
+		return nullptr;
+	}
+	if (begin == end - 1) {
+		return *begin;
+	}
+	Symbol* const* max = begin;
+	for (Symbol* const* current = begin; current < end; current++) {
+		ParsingNode& max_node     = (*max)->get_parsing_node();
+		ParsingNode& current_node = (*current)->get_parsing_node();
+		const bool   is_max_invalid{max_node._op_type == Type::none || (max_node._op_type == Type::prefix && max != begin)
                               || (max_node._op_type == Type::postfix && max != end - 1)};
-    const bool   is_current_valid{current_node._op_type == Type::infix
+		const bool   is_current_valid{current_node._op_type == Type::infix
                                 || (current_node._op_type == Type::prefix && current == begin)
                                 || (current_node._op_type == Type::postfix && current == end - 1)};
-    const bool   is_current_better{current_node.precedence().value_or(0) > max_node.precedence().value_or(0)
+		const bool   is_current_better{current_node.precedence().value_or(0) > max_node.precedence().value_or(0)
                                  || (current_node.precedence().value_or(0) == max_node.precedence().value_or(0)
                                      && current_node.precedence().value_or(0) % 2 == 1)};
-    if (is_max_invalid || (is_current_valid && is_current_better))
-      max = current;
-  }
-  ASTNode& op = (*max)->get_ast_node();
-  if ((*max)->get_parsing_node()._op_type == Type::infix || (*max)->get_parsing_node()._op_type == Type::postfix) {
-    op._args.push_back(parse(begin, max));
-  }
-  if ((*max)->get_parsing_node()._op_type == Type::infix || (*max)->get_parsing_node()._op_type == Type::prefix) {
-    op._args.push_back(parse(max + 1, end));
-  }
-  return *max;
+		if (is_max_invalid || (is_current_valid && is_current_better))
+			max = current;
+	}
+	ASTNode& op = (*max)->get_ast_node();
+	if ((*max)->get_parsing_node()._op_type == Type::infix || (*max)->get_parsing_node()._op_type == Type::postfix) {
+		op._args.push_back(parse(begin, max));
+	}
+	if ((*max)->get_parsing_node()._op_type == Type::infix || (*max)->get_parsing_node()._op_type == Type::prefix) {
+		op._args.push_back(parse(max + 1, end));
+	}
+	return *max;
 }
 ASTNode* run(Symbol* symbol) {
 	ParsingNode& node = symbol->get_parsing_node();

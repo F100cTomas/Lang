@@ -1,102 +1,111 @@
 #pragma once
-#include "../Parser/_parser.hpp"
 #include "../error.hpp"
+#include "../symboltable.hpp"
 #include <iostream>
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Function.h>
+#include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Instructions.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Value.h>
-#include <variant>
 namespace CodeGenerator {
-using ExpressionResult = std::variant<llvm::Value*, llvm::Function*>;
-enum class NodeType : uint8_t {
-	empty,
-	val,
-	fn,
-};
+enum class NodeType : uint8_t { none, fn, let };
+enum class ScopeType : uint8_t { empty, local, global };
 class LLVMState;
-struct LLVMFunction {
-	llvm::Function*    _fn{nullptr};
-	llvm::BasicBlock*  _block{nullptr};
-	llvm::IRBuilder<>* _alloca_builder{nullptr};
-	llvm::IRBuilder<>* _builder{nullptr};
-
-public:
-	LLVMFunction(LLVMState& state, const Lexer::Token& name);
-	friend std::ostream& operator<<(std::ostream& stream, const LLVMFunction& fn);
-};
-struct LLVMValue {
-	llvm::Value*  _value{nullptr};
-	LLVMFunction* _parent{nullptr};
-
-public:
-	friend std::ostream& operator<<(std::ostream& stream, const LLVMValue& val);
-};
-struct LLVMNode {
-	union NodeData {
-		LLVMValue*    _val{nullptr};
-		LLVMFunction* _fn;
+class LLVMFunction {
+	struct LLVMDefinition {
+		llvm::IRBuilder<> _builder;
+		llvm::BasicBlock* _block;
+		inline LLVMDefinition(llvm::BasicBlock* block) : _builder(block), _block(block) {}
 	};
-	NodeData _value{};
-	NodeType _type{NodeType::empty};
-	inline LLVMNode(LLVMValue* value) : _type(NodeType::val) {
-		_value._val = value;
+	llvm::Function* _data{nullptr};
+	LLVMState&      _state;
+	LLVMDefinition* _definition{nullptr};
+
+public:
+	LLVMFunction(const char* name, LLVMState& _state);
+	llvm::IRBuilder<>&     builder();
+	inline llvm::Function* get() {
+		return _data;
 	}
-	inline LLVMNode(LLVMFunction* fn) : _type(NodeType::fn) {
-		_value._fn = fn;
-	}
-	inline LLVMValue* get_val() {
-		if (_type != NodeType::val)
-			ERROR("Tried to access invalid data");
-		return _value._val;
-	}
-	inline LLVMFunction* get_fn() {
-		if (_type != NodeType::fn)
-			ERROR("Tried to access invalid data");
-		return _value._fn;
-	}
-	friend inline std::ostream& operator<<(std::ostream& stream, const LLVMNode& node) {
-		switch (node._type) {
-		case NodeType::val: return stream << *node._value._val;
-		case NodeType::fn: return stream << *node._value._fn;
+	void finalize(llvm::Value* return_value);
+};
+class LLVMVariable {
+	union VariableData {
+		llvm::AllocaInst*     _local{nullptr};
+		llvm::GlobalVariable* _global;
+	};
+	ScopeType    _type{ScopeType::empty};
+	VariableData _data{};
+	LLVMState&   _state;
+
+public:
+	LLVMVariable(const char* name, LLVMState& state, llvm::IRBuilder<>* builder);
+	inline llvm::Value* get() {
+		switch (_type) {
+		case ScopeType::local: return _data._local;
+		case ScopeType::global: return _data._global;
 		default: break;
 		}
-		ERROR("Tried to access invalid data");
-		return stream;
+		ERROR("Invalid memory.");
+		return nullptr;
 	}
+	void finalize(llvm::IRBuilder<>& builder, llvm::Value* initializer);
+};
+class LLVMNode {
+	union NodeData {
+		llvm::Value*  _val{nullptr};
+		LLVMFunction* _fn;
+		LLVMVariable* _let;
+	};
+	NodeType   _type{NodeType::none};
+	NodeData   _data{};
+	Symbol*    _symbol{nullptr};
+	LLVMNode*  _parent{nullptr};
+	LLVMState& _state;
+	bool       _is_finalized{false};
+
+public:
+	LLVMNode(Symbol* symbol, LLVMState& state, LLVMNode* parent);
+	Symbol* symbol() {
+		return _symbol;
+	}
+	void                 finalize();
+	llvm::IRBuilder<>&   builder();
+	void                 create_let();
+	void                 create_fn();
+	llvm::Value*         get_value();
+	llvm::Function*      get_function();
+	llvm::Value*         get_variable();
+	friend std::ostream& operator<<(std::ostream& stream, const LLVMNode& node);
 };
 class LLVMState {
 	llvm::LLVMContext* _context{nullptr};
 	llvm::Module*      _module{nullptr};
-	LLVMFunction*      _entry{nullptr};
+	LLVMFunction*      _entry;
+	uint64_t           _id{0};
 
 public:
 	LLVMState();
 	LLVMState(const LLVMState&) = delete;
 	~LLVMState();
-	llvm::LLVMContext& context() {
+	inline llvm::LLVMContext& context() {
 		return *_context;
 	}
-	llvm::Module& module() {
+	inline llvm::Module& module() {
 		return *_module;
 	}
-	LLVMFunction* entry() {
-		return _entry;
+	inline LLVMFunction& entry() {
+		return *_entry;
+	}
+	inline uint64_t id() const {
+		return _id;
 	}
 	void add_exit_syscall(llvm::Value* code);
 };
-LLVMNode*     blank_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function);
-LLVMNode*     mul_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function);
-LLVMNode*     div_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function);
-LLVMNode*     mod_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function);
-LLVMNode*     add_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function);
-LLVMNode*     sub_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function);
-LLVMNode*     u_plus_gen(Symbol* symbol, LLVMState& state, LLVMFunction* function);
-LLVMNode*     u_minus_gen(Parser::ASTNode& node, LLVMState& state, LLVMFunction* function);
-LLVMNode*     let_gen(Symbol* symbol, LLVMState& state, LLVMFunction* function);
-LLVMNode*     scope_gen(Symbol* symbol, LLVMState& state, LLVMFunction* function);
-LLVMFunction* function_gen(Symbol* symbol, LLVMState& state);
-LLVMNode*     run(Symbol* symbol, LLVMState& state, LLVMFunction* function);
+llvm::Value* opgen(llvm::IRBuilder<>& builder, char op, LLVMNode* left, LLVMNode* right, LLVMState& state);
+llvm::Value* opgen2(llvm::IRBuilder<>& builder, char op, LLVMNode* left, LLVMNode* right, LLVMState& state);
+LLVMNode* run(Symbol* symbol, LLVMState& state, LLVMNode* parent);
 } // namespace CodeGenerator

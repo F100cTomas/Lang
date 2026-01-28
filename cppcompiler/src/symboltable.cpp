@@ -22,8 +22,13 @@ Symbol::Symbol(SymbolTable& table, Preparser::ParsingNode& parsing_node) :
 Symbol::Symbol(SymbolTable& table, Parser::ASTNode& ast_node) : _table(&table), _ast_node(&ast_node) {
 	table.register_symbol(this);
 }
-Symbol::Symbol(SymbolTable& table, CodeGenerator::LLVMNode& llvm_node) : _table(&table), _llvm_node(&llvm_node) {
+Symbol::Symbol(SymbolTable& table, CodeGenerator::LLVMState& state, CodeGenerator::LLVMNode& llvm_node) :
+    _table(&table) {
+	_llvm_nodes[state.id()] = &llvm_node;
 	table.register_symbol(this);
+}
+void Symbol::be_suceeded_by(Symbol* successor) {
+	_successor = successor;
 }
 Symbol::~Symbol() {}
 std::ostream& operator<<(std::ostream& stream, const Symbol& symbol) {
@@ -35,9 +40,10 @@ std::ostream& operator<<(std::ostream& stream, const Symbol& symbol) {
 		stream << *symbol._ast_node << ' ';
 	else
 		stream << "[] ";
-	if (symbol._llvm_node != nullptr)
-		stream << *symbol._llvm_node << ' ';
-	else
+	if (!symbol._llvm_nodes.empty()) {
+		for (const auto& [id, node]: symbol._llvm_nodes)
+			stream << *node << ' ';
+	} else
 		stream << "[] ";
 	return stream;
 }
@@ -54,41 +60,25 @@ Parser::ASTNode& Symbol::get_ast_node() {
 		if (_successor != nullptr)
 			return _successor->get_ast_node();
 		Parser::ASTNode* result = Parser::run(this);
-		if (_successor == nullptr) {
+		if (_successor == nullptr)
 			_ast_node = result;
-		}
 		return *result;
 	}
 	return *_ast_node;
 }
-CodeGenerator::LLVMNode& Symbol::get_llvm_node(CodeGenerator::LLVMState&    llvm_state,
-                                               CodeGenerator::LLVMFunction* function) {
-	if (_llvm_node == nullptr || _llvm_function != function) {
+CodeGenerator::LLVMNode& Symbol::get_llvm_node(CodeGenerator::LLVMState& llvm_state, CodeGenerator::LLVMNode* parent) {
+	if (!_llvm_nodes.count(llvm_state.id())) {
 		if (_successor != nullptr)
-			return _successor->get_llvm_node(llvm_state, function);
-		_llvm_node                      = nullptr;
-		_llvm_function                  = function;
-		CodeGenerator::LLVMNode* result = CodeGenerator::run(this, llvm_state, function);
-		if (_successor == nullptr) {
-			_llvm_node = result;
-		}
+			return _successor->get_llvm_node(llvm_state, parent);
+		CodeGenerator::LLVMNode*& slot = _llvm_nodes[llvm_state.id()];
+		CodeGenerator::LLVMNode* result = CodeGenerator::run(this, llvm_state, parent);
+		if (_successor == nullptr)
+			slot = result;
+		else
+			_llvm_nodes.erase(llvm_state.id());
 		return *result;
 	}
-	return *_llvm_node;
-}
-CodeGenerator::LLVMNode& Symbol::get_llvm_node(CodeGenerator::LLVMState& llvm_state) {
-	if (_llvm_node == nullptr || _llvm_function != llvm_state.entry()) {
-		if (_successor != nullptr)
-			return _successor->get_llvm_node(llvm_state);
-		_llvm_node                      = nullptr;
-		_llvm_function                  = llvm_state.entry();
-		CodeGenerator::LLVMNode* result = CodeGenerator::run(this, llvm_state, llvm_state.entry());
-		if (_successor == nullptr) {
-			_llvm_node = result;
-		}
-		return *result;
-	}
-	return *_llvm_node;
+	return *_llvm_nodes[llvm_state.id()];
 }
 SymbolTable::SymbolTable() {}
 SymbolTable::SymbolTable(SymbolTable* upper) : _parent(upper) {
