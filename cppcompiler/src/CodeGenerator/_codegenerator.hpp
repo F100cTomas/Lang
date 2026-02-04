@@ -27,10 +27,12 @@ class LLVMFunction {
 public:
 	LLVMFunction(const char* name, LLVMState& _state);
 	llvm::IRBuilder<>&     builder();
+	llvm::BasicBlock*      block();
 	inline llvm::Function* get() {
 		return _data;
 	}
-	void finalize(llvm::Value* return_value);
+	llvm::IRBuilder<>& succeed();
+	void               finalize(llvm::Value* return_value);
 };
 class LLVMVariable {
 	union VariableData {
@@ -74,6 +76,7 @@ public:
 	}
 	void                 finalize();
 	llvm::IRBuilder<>&   builder();
+	LLVMFunction&        parent_function();
 	void                 create_let();
 	void                 create_fn();
 	llvm::Value*         get_value();
@@ -107,5 +110,5 @@ public:
 };
 llvm::Value* opgen(llvm::IRBuilder<>& builder, char op, LLVMNode* left, LLVMNode* right, LLVMState& state);
 llvm::Value* opgen2(llvm::IRBuilder<>& builder, char op, LLVMNode* left, LLVMNode* right, LLVMState& state);
-LLVMNode* run(Symbol* symbol, LLVMState& state, LLVMNode* parent);
+LLVMNode*    run(Symbol* symbol, LLVMState& state, LLVMNode* parent);
 } // namespace CodeGenerator

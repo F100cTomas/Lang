@@ -46,6 +46,17 @@ public:
 	inline ~IfData() override {}
 	ASTNode* parse_keyword(Symbol* symbol) const override;
 };
+class WhileData : public KeywordData {
+	std::vector<Symbol*> _cond{};
+	std::vector<Symbol*> _body{};
+	SymbolTable*         _cond_scope{nullptr};
+	SymbolTable*         _body_scope{nullptr};
+
+public:
+	WhileData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved);
+	inline ~WhileData() override {}
+	ASTNode* parse_keyword(Symbol* symbol) const override;
+};
 class FnData : public KeywordData {
 	Lexer::Token              _name;
 	std::vector<Lexer::Token> _args;

@@ -125,6 +125,16 @@ IRBuilder<>& LLVMFunction::builder() {
 	_definition = new LLVMDefinition(BasicBlock::Create(_state.context(), "", _data));
 	return _definition->_builder;
 }
+BasicBlock* LLVMFunction::block() {
+	if (_definition != nullptr)
+		return _definition->_block;
+	_definition = new LLVMDefinition(BasicBlock::Create(_state.context(), "", _data));
+	return _definition->_block;
+}
+IRBuilder<>& LLVMFunction::succeed() {
+	_definition = new LLVMDefinition(BasicBlock::Create(_state.context(), "", _data));
+	return builder();
+}
 void LLVMFunction::finalize(Value* return_value) {
 	builder().CreateRet(return_value);
 }
@@ -146,8 +156,57 @@ LLVMNode::LLVMNode(Symbol* symbol, LLVMState& state, LLVMNode* parent) :
 void LLVMNode::finalize() {
 	if (_is_finalized)
 		return;
-	_is_finalized                   = true;
-	Parser::ASTNode&       ast_node = _symbol->get_ast_node();
+	_is_finalized             = true;
+	Parser::ASTNode& ast_node = _symbol->get_ast_node();
+	if (ast_node._name == "if") {
+		LLVMNode&     node1    = ast_node._args[0]->get_llvm_node(_state, this);
+		LLVMNode&     node2    = ast_node._args[1]->get_llvm_node(_state, this);
+		LLVMNode&     node3    = ast_node._args[2]->get_llvm_node(_state, this);
+		LLVMFunction& parent   = parent_function();
+		IRBuilder<>&  builder1 = parent.builder();
+		node1.finalize();
+		IRBuilder<>& builder2 = parent.succeed();
+		BasicBlock*  block2   = parent.block();
+		node2.finalize();
+		IRBuilder<>& builder3 = parent.succeed();
+		BasicBlock*  block3   = parent.block();
+		node3.finalize();
+		IRBuilder<>& builder4 = parent.succeed();
+		BasicBlock*  block4   = parent.block();
+		builder1.CreateCondBr(
+		    builder1.CreateICmpNE(node1.get_value(), ConstantInt::get(Type::getInt64Ty(_state.context()), 0)), block2,
+		    block3);
+		builder2.CreateBr(block4);
+		builder3.CreateBr(block4);
+		PHINode* phi = builder4.CreatePHI(Type::getInt64Ty(_state.context()), 2);
+		phi->addIncoming(node2.get_value(), block2);
+		phi->addIncoming(node3.get_value(), block3);
+		_type      = NodeType::none;
+		_data._val = phi;
+		return;
+	}
+	if (ast_node._name == "while") {
+		LLVMNode&     node2    = ast_node._args[0]->get_llvm_node(_state, this);
+		LLVMNode&     node3    = ast_node._args[1]->get_llvm_node(_state, this);
+		LLVMFunction& parent   = parent_function();
+		IRBuilder<>&  builder1 = parent.builder();
+		IRBuilder<>&  builder2 = parent.succeed();
+		BasicBlock*   block2   = parent.block();
+		builder1.CreateBr(block2);
+		node2.finalize();
+		IRBuilder<>& builder3 = parent.succeed();
+		BasicBlock*  block3   = parent.block();
+		node3.finalize();
+		parent.succeed();
+		BasicBlock* block4 = parent.block();
+		builder2.CreateCondBr(
+		    builder2.CreateICmpNE(node2.get_value(), ConstantInt::get(Type::getInt64Ty(_state.context()), 0)), block3,
+		    block4);
+		builder3.CreateBr(block2);
+		_type      = NodeType::none;
+		_data._val = ConstantInt::get(Type::getInt64Ty(_state.context()), 0);
+		return;
+	}
 	std::vector<LLVMNode*> children{};
 	children.reserve(ast_node._args.size());
 	for (Symbol* child: ast_node._args)
@@ -213,6 +272,13 @@ IRBuilder<>& LLVMNode::builder() {
 	if (_parent == nullptr)
 		return _state.entry().builder();
 	return _parent->builder();
+}
+LLVMFunction& LLVMNode::parent_function() {
+	if (_type == NodeType::fn)
+		return *_data._fn;
+	if (_parent == nullptr)
+		return _state.entry();
+	return _parent->parent_function();
 }
 void LLVMNode::create_let() {
 	if (_type != NodeType::none)

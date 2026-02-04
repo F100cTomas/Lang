@@ -26,6 +26,13 @@ ASTNode* IfData::parse_keyword(Symbol* symbol) const {
 	op->_args.push_back(parse(_else.data(), _else.data() + _else.size()));
 	return op;
 }
+ASTNode* WhileData::parse_keyword(Symbol* symbol) const {
+	ASTNode* op = new ASTNode("while");
+	op->_args.reserve(2);
+	op->_args.push_back(parse(_cond.data(), _cond.data() + _cond.size()));
+	op->_args.push_back(parse(_body.data(), _body.data() + _body.size()));
+	return op;
+}
 ASTNode* FnData::parse_keyword(Symbol* symbol) const {
 	ASTNode* op   = new ASTNode("fn");
 	op->_metadata = new FnMeta{_name, _args};

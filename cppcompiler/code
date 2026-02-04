@@ -1,5 +1,5 @@
 fn main() : {
-	putchar ((2 != 2) + 48);
-	putchar 10;
-	0
-	};
+	while (1) {
+		putchar 65
+	}
+};

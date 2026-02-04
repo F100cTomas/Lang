@@ -185,6 +185,102 @@ IfData::IfData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& 
 	}
 	out_reserved = end - begin - 1;
 }
+WhileData::WhileData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved) {
+	if (end == begin + 1)
+		ERROR("Syntax Error");
+	const Lexer::Token* cond_begin{nullptr};
+	const Lexer::Token* cond_end{nullptr};
+	const Lexer::Token* body_begin{nullptr};
+	const Lexer::Token* body_end{nullptr};
+	if (*(begin + 1) == "(") {
+		// while (<cond>) ...
+		size_t layer{0};
+		cond_begin = begin + 2;
+		for (const Lexer::Token* current = cond_begin; current < end; current++) {
+			if (*current == "(") {
+				layer++;
+				continue;
+			}
+			if (*current == ")") {
+				if (layer == 0) {
+					cond_end   = current;
+					body_begin = current + 1;
+					break;
+				}
+				layer--;
+			}
+		}
+	} else {
+		// while <cond> {<body>}
+		cond_begin = begin + 1;
+		size_t layer{0};
+		for (const Lexer::Token* current = cond_begin; current < end; current++) {
+			if (layer == 0 && *current == "{") {
+				cond_end   = current;
+				body_begin = current;
+				break;
+			}
+			if (*current == "(" || *current == "[") {
+				layer++;
+				continue;
+			}
+			if (*current == ")" || *current == "]") {
+				layer--;
+			}
+		}
+	}
+	if (body_begin == nullptr)
+		ERROR("Syntax Error");
+	if (*body_begin == "{") {
+		// while ... {<then>}
+		size_t layer{0};
+		for (const Lexer::Token* current = body_begin + 1; current < end; current++) {
+			if (*current == "{") {
+				layer++;
+				continue;
+			}
+			if (*current == "}") {
+				if (layer == 0) {
+					body_end = current + 1;
+					break;
+				}
+				layer--;
+			}
+		}
+		if (body_end == nullptr)
+			ERROR("Syntax Error");
+	} else {
+		// while (<cond>) <then>
+		size_t layer{0};
+		for (const Lexer::Token* current = begin; current < end; current++) {
+			if (layer == 0 && *current == "else") {
+				body_end = current;
+				break;
+			}
+			if (*current == "{" || *current == "(" || *current == "[") {
+				layer++;
+				continue;
+			}
+			if (*current == "}" || *current == ")" || *current == "]") {
+				layer--;
+			}
+		}
+		if (body_end == nullptr)
+			body_end = end;
+	}
+	std::cout << '(';
+	for (const Lexer::Token* c = cond_begin; c < cond_end; c++)
+		std::cout << c << ' ';
+	std::cout << "\b){";
+	for (const Lexer::Token* c = body_begin; c < body_end; c++)
+		std::cout << c << ' ';
+	std::cout << "\b}" << std::endl;
+	_cond_scope  = new SymbolTable(&symbols);
+	_cond        = preparse(cond_begin, cond_end, *_cond_scope);
+	_body_scope  = new SymbolTable(&symbols);
+	_body        = preparse(body_begin, body_end, *_body_scope);
+	out_reserved = body_end - begin - 1;
+}
 FnData::FnData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& symbols, size_t& out_reserved,
                Symbol*& out_symbol) : _scope(*new SymbolTable(&symbols)) {
 	out_reserved = end - begin - 1;
@@ -296,6 +392,9 @@ Symbol* preparse_keyword(Symbol* const* begin_before, Symbol* const* end_before,
 		    ->make_symbol(symbols);
 	if (*keyword == "if")
 		return (new ParsingNode{*keyword, Type::undecided, new IfData(keyword, end, symbols, out_reserved_after)})
+		    ->make_symbol(symbols);
+	if (*keyword == "while")
+		return (new ParsingNode{*keyword, Type::undecided, new WhileData(keyword, end, symbols, out_reserved_after)})
 		    ->make_symbol(symbols);
 	if (*keyword == "fn")
 		return new FnData(keyword, end, symbols, out_reserved_after, symbol), symbol;
