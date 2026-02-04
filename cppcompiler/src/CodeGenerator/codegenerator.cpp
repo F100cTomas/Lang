@@ -60,9 +60,9 @@ LLVMFunction* get_putchar(LLVMState& state) {
 	Function* WriteConsoleA =
 	    Function::Create(WriteConsoleA_type, GlobalValue::ExternalLinkage, "WriteConsoleA", state.module());
 	Value* null_ptr = ConstantPointerNull::get(PointerType::get(state.context(), 0));
-	fn->_builder->CreateCall(
+	fn->builder().CreateCall(
 	    WriteConsoleA,
-	    {fn->_builder->CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(state.context()), -11)}), ptr,
+	    {fn->builder().CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(state.context()), -11)}), ptr,
 	     ConstantInt::get(Type::getInt32Ty(state.context()), 1), null_ptr, null_ptr});
 #endif
 	fn->finalize(ConstantInt::get(Type::getInt64Ty(state.context()), 0));
@@ -104,9 +104,9 @@ LLVMFunction* get_getchar(LLVMState& state) {
 	Function* WriteConsoleA =
 	    Function::Create(WriteConsoleA_type, GlobalValue::ExternalLinkage, "WriteConsoleA", state.module());
 	Value* null_ptr = ConstantPointerNull::get(PointerType::get(state.context(), 0));
-	fn->_builder->CreateCall(
+	fn->builder().CreateCall(
 	    WriteConsoleA,
-	    {fn->_builder->CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(state.context()), -11)}), ptr,
+	    {fn->builder().CreateCall(GetStdHandle, {ConstantInt::get(Type::getInt32Ty(state.context()), -11)}), ptr,
 	     ConstantInt::get(Type::getInt32Ty(state.context()), 1), null_ptr, null_ptr});
 #endif
 	getchar = fn;
@@ -333,7 +333,7 @@ void LLVMState::add_exit_syscall(llvm::Value* code) {
 	FunctionType* exit_type = FunctionType::get(Type::getVoidTy(*_context), {Type::getInt32Ty(*_context)}, false);
 	Function*     exit      = Function::Create(exit_type, GlobalValue::ExternalLinkage, "ExitProcess", *_module);
 	exit->setDoesNotReturn();
-	_entry->_builder->CreateCall(exit, {_entry->_builder->CreateTrunc(code, Type::getInt32Ty(*_context))});
+	_entry->builder().CreateCall(exit, {_entry->builder().CreateTrunc(code, Type::getInt32Ty(*_context))});
 #endif
 	_entry->builder().CreateUnreachable();
 }
