@@ -254,6 +254,7 @@ void LLVMNode::finalize() {
 	if (symbol == nullptr)
 		ERROR("Symbol not found: ", ast_node._name);
 	LLVMNode& node = symbol->get_llvm_node(_state, nullptr);
+	node.finalize();
 	if (node._type == NodeType::fn) {
 		_type     = NodeType::fn;
 		_data._fn = node._data._fn;
