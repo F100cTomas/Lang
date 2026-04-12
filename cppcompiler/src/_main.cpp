@@ -1,19 +1,35 @@
 #include "module.hpp"
 #include <cstring>
 #include <iostream>
-
-int main(int argc, const char* argv[]) {
-	// TODO: Add compilation options
-	Module module{"code"};
+#define REQUIRED_ARGS \
+	REQUIRED_STRING_ARG(input_file, "vstup", "Soubor ke kompilaci")
+#define OPTIONAL_ARGS \
+	OPTIONAL_STRING_ARG(output_file, const_cast<char*>("program"), "-o", "výstup", "Název zkompilovaného souboru")
+#define BOOLEAN_ARGS \
+	BOOLEAN_ARG(asm_opt, "-a", "Assembly výstup") \
+	BOOLEAN_ARG(debug, "-d", "Debug výstup") \
+	BOOLEAN_ARG(help, "-h", "Seznam argumentů")
+typedef bool _Bool;
+#include "easyargs.h"
+int main(int argc, char* argv[]) {
+	args_t args = make_default_args();
+	if (!parse_args(argc, argv, &args) || args.help) {
+		print_help(argv[0]);
+		return 1;
+	}
+	Module module{args.input_file};
 	IrFile ir = module.build();
-	std::cout << module << '\n';
-	std::cout << ir << '\n';
-	if (argc > 1 && strcmp(argv[1], "-a") == 0) { // Assembly output
+	if (args.debug) {
+		std::cout << module << '\n';
+		std::cout << ir << '\n';
+	}
+	if (args.asm_opt) { // Assembly output
 		AsmFile instructions = ir.make_asm();
-		std::cout << instructions << '\n';
-		instructions.commit("program.a");
+		if (args.debug)
+			std::cout << instructions << '\n';
+		instructions.commit(args.output_file);
 		return 0;
 	}
 	ObjFile obj = ir.make_obj();
-	obj.link_executable().commit("program");
+	obj.link_executable().commit(args.output_file);
 }

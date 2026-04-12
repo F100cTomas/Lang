@@ -19,29 +19,29 @@ LLD_HAS_DRIVER(elf)
 LLD_HAS_DRIVER(coff)
 namespace LlvmInterface {
 static bool initialized = false;
-void init() {
-	if (initialized)
-		return;
-	initialized = true;
-	llvm::InitializeAllTargetInfos();
-	llvm::InitializeAllTargets();
-	llvm::InitializeAllTargetMCs();
-	llvm::InitializeAllAsmParsers();
-	llvm::InitializeAllAsmPrinters();
+void        init() {
+  if (initialized)
+    return;
+  initialized = true;
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
+  llvm::InitializeAllAsmPrinters();
 }
 void assemble(const char* filepath, IrFile& file) {
 	init();
-	std::string         triple_string = llvm::sys::getDefaultTargetTriple();
+#ifdef __MINGW64__
+	llvm::Triple triple{"x86_64-pc-windows-msvc"};
+#else
+	std::string  triple_string = llvm::sys::getDefaultTargetTriple();
+	llvm::Triple triple{triple_string};
+#endif
 	std::string         error1;
-	const llvm::Target* target = llvm::TargetRegistry::lookupTarget(triple_string, error1);
+	const llvm::Target* target = llvm::TargetRegistry::lookupTarget(triple, error1);
 	if (!target)
 		ERROR(error1);
 	llvm::TargetOptions  opt;
-#ifdef __MINGW64__
-	llvm::Triple         triple{"x86_64-pc-windows-msvc"};
-#else
-	llvm::Triple         triple{triple_string};
-#endif
 	llvm::TargetMachine* machine = target->createTargetMachine(triple, "generic", "", opt, {});
 	file.module().setDataLayout(machine->createDataLayout());
 	std::error_code      error2;
@@ -56,17 +56,17 @@ void assemble(const char* filepath, IrFile& file) {
 }
 void compile(const char* filepath, IrFile& file) {
 	init();
-	std::string         triple_string = llvm::sys::getDefaultTargetTriple();
+#ifdef __MINGW64__
+	llvm::Triple triple{"x86_64-pc-windows-msvc"};
+#else
+	std::string  triple_string = llvm::sys::getDefaultTargetTriple();
+	llvm::Triple triple{triple_string};
+#endif
 	std::string         error1;
-	const llvm::Target* target = llvm::TargetRegistry::lookupTarget(triple_string, error1);
+	const llvm::Target* target = llvm::TargetRegistry::lookupTarget(triple, error1);
 	if (!target)
 		ERROR(error1);
 	llvm::TargetOptions  opt;
-#ifdef __MINGW64__
-	llvm::Triple         triple{"x86_64-pc-windows-msvc"};
-#else
-	llvm::Triple         triple{triple_string};
-#endif
 	llvm::TargetMachine* machine = target->createTargetMachine(triple, "generic", "", opt, {});
 	file.module().setDataLayout(machine->createDataLayout());
 	std::error_code      error2;

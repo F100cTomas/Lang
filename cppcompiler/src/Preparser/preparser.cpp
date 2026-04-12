@@ -268,13 +268,6 @@ WhileData::WhileData(const Lexer::Token* begin, const Lexer::Token* end, SymbolT
 		if (body_end == nullptr)
 			body_end = end;
 	}
-	std::cout << '(';
-	for (const Lexer::Token* c = cond_begin; c < cond_end; c++)
-		std::cout << c << ' ';
-	std::cout << "\b){";
-	for (const Lexer::Token* c = body_begin; c < body_end; c++)
-		std::cout << c << ' ';
-	std::cout << "\b}" << std::endl;
 	_cond_scope  = new SymbolTable(&symbols);
 	_cond        = preparse(cond_begin, cond_end, *_cond_scope);
 	_body_scope  = new SymbolTable(&symbols);
