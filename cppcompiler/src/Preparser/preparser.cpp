@@ -1,5 +1,7 @@
+#include "../Parser/_parser.hpp"
 #include "../error.hpp"
 #include "_preparser.hpp"
+#include <cstdint>
 #include <ostream>
 #include <vector>
 namespace Preparser {
@@ -284,10 +286,15 @@ FnData::FnData(const Lexer::Token* begin, const Lexer::Token* end, SymbolTable& 
 	if (begin[2] != "(")
 		ERROR("Missing ( )");
 	const Lexer::Token* current = begin + 3;
+	uint32_t arg_count = 0;
 	for (; *current != ")"; current++) {
 		if (current == end)
 			ERROR("Syntax Error");
-		_args.push_back(*current);
+		Parser::ASTNode* arg_ast = new Parser::ASTNode(" arg");
+		arg_ast->_metadata       = new Parser::ArgMeta{arg_count++, out_symbol};
+		Symbol* arg              = new Symbol(symbols, *arg_ast);
+		symbols.register_named_symbol(arg, *current);
+		_args.push_back(arg);
 		current++;
 		if (*current != ",") {
 			if (*current == ")")

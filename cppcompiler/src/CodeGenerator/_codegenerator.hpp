@@ -79,6 +79,7 @@ public:
 	LLVMFunction&        parent_function();
 	void                 create_let();
 	void                 create_fn();
+	void                 create_arg();
 	llvm::Value*         get_value();
 	llvm::Function*      get_function();
 	llvm::Value*         get_variable();

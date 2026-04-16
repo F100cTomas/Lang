@@ -1,14 +1,15 @@
 \documentclass[12pt, a4paper, titlepage]{scrreprt}
 
-\usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[czech]{babel}
-\usepackage{cmbright}
+\usepackage[T1]{fontenc}
 \usepackage{microtype}
+\usepackage{cmbright}
 \usepackage{geometry}
+\usepackage{listings}
 \geometry{margin=5em}
 
-\title{Maturnitní Projekt 2026} % přidat jméno
+\title{Compiler vlastního programovacího jazyka}
 \author{Ondřej Suk}
 \date{\today}
 
@@ -17,33 +18,87 @@
 \maketitle
 
 \begin{abstract}
-a
+Práce se zabývá vytvářením jednoduchého compileru programovacího jazyka vytvořeného specificky pro tento projekt za pomocí knihovny LLVM.
+Jazyk samotný je velmi jednoduchý a je velmi obtížné v něm programovat složitější programy. Důvodem je, že i v aktuálním stavu je projekt poměrně
+rozsáhlý a tudíž obsahuje jenom minimum, aby v něm bylo možné programovat. Některé části jazyka jsou navrženy netradičním způsobem, což je z důvodu,
+že na projektu plánuji pracovat i po maturitní zkoušce, tudíž jsem kód přizpůsobil tomu, jak plánuji, aby fungoval finální jazyk. Dále je to z
+důvodu, že jsem chtěl problémy, které projekt zahrnoval řešit sám, nikoli kopírovat řešení ostatních.
+
+Compiler jsem implementoval v jazyce C++ 17. Vstupem compileru je soubor s kódem. Ten je potom přeložen do LLVM IR, jazyka poskytovaného knihovnou
+LLVM, ze kterého je pak zkompilován na binární kód. Z binárního kódu nakonec vznikne spustitelný soubor. Kompilace z LLVM IR na binární kód je již
+součástí knihovny LLVM, tudíž se hlavní část projektu zabývá překladem souboru s programem na LLVM IR.
 \end{abstract}
 
 \tableofcontents
 \clearpage
 
 \chapter{Úvod}
-b
+Cílem projektu bylo vytvořit compiler jednoduchého jazyka, který bude sloužit jako základ mnohem pokročilejšího jazyka, na kterém plánuji
+pracovat po maturitě. Z toho důvodu je celý projekt přizpůsobený mé trochu netradiční vizi pro syntax finálního jazyka. Při tvorbě projektu
+jsem chtěl oběvovat nové koncepty sám, takže se výsledek může lišit od běžných compilerů. V jazyce tedy není v aktuálním stavu snadné programovat
+a mnoho věcí, které by programátor  očekával chybí. To je v souladu s cílem projektu, protože plně rozsáhlý programovací jazyk by potřeboval
+množství času mnohem vyšší, než je v rámci maturitního projektu možné.
 
+Již zpočátku bylo jasné, že použiji knihovnu LLVM. LLVM slouží jako zaáklad mnoha moderních compilerů. Poskytuje jazyk zvaný LLVM IR, do kterého
+compiler přeloží vstupní kód. LLVM pak může kód zkompilovat pro kteroukoli cílovou platformu, takže je práce pro podporu mnoha platforem snažší.
+Navíc dokáže LLVM vzniklý kód optimalizovat. Jako programovací jazyk jsem si vybral C++, protože LLVM, je primárně knihovnou pro jazyk C++.
+Specificky je LLVM napsáno pro C++ 17, a tak jsem i já použil C++ 17. Běh programu jsem strukturoval na několik fází a kostru, která ty fáze spojuje.
+Každá fáze se nachází ve vlastní složce, zatímco kostra je rovnou ve složce se zdrojovým kódem.
+
+Hotový projekt tedy napřed přečte soubor s kódem a postupně během několika fází z něj extrahuje všechny důležité informace. Na základě těch informací
+pak napíše program přeložený do jazyka LLVM IR. Poslední fáze potom zavolá knihovnu LLVM a ta z LLVM IR vytvoří binární kód specifický pro cílovou
+platformu. Následně pak z binárního kódu vytvoří spustitelný soubor. (Na Windows soubor s příponou .exe)
+
+Hlavní část dokumentace je rozdělena na dvě části. Programátorská dokumntace se zabývá samotným compilerem. Popisuje detailně jednotlivé fáze
+kompilace, a proč jsem některé věci navrhl určitým způsobem. Měla by poskytovat vše důležité pro další práci na projektu. Uživatelská dokumentace
+se zaměřuje na samotný jazyk a vše, co obsahuje.
 \chapter{Programátorská dokumentace}
-c
-
-\section{Architektura aplikace}
-d
-
-\section{Použité technologie a nástroje}
-e
-
-\section{Instalace a spuštění}
-f
-
-\section{Popis důležitých částí kódu}
-g
 
 \chapter{Uživatelská dokumentace}
-h
+\section{Instalace a spuštění}
+Předpokladem k používání jazyka je mít projekt nainstalovaný.
+\subsection{Kompilace na Linuxu}
+Následuje vysvětlení postupu kompilace pro Linux. Aktuálně není na GitHubu projekt ve zkompilované verzi, proto je nutné si jej zkompilovat sám.
+\paragraph{Předpoklady:}
+\begin{itemize}
+ \item Git (pouze ke stažení projektu z GitHubu)
+ \item Funkční C++ compiler (clang++ nebo g++)
+ \item Make
+ \item LLVM
+ \item LLD
+ \item Příkazový řádek
+\end{itemize}
 
+\paragraph{Krok 1:}
+Nejprve je důležité mít kód stažený. Zde použijeme rozhraní Gitu pro příkazový řádek, ale je také možné využít různých grafických rozhraní, která
+dokáží udělat to stejné. Alternativou ke Gitu by bylo si projekt z GitHubu stáhnout jako .zip archiv. Otevřeme si tedy náš příkazový řádek a ke stažení si projektu použijeme příkaz:
+\begin{verbatim}
+git clone https://github.com/F100cTomas/Lang.git
+\end{verbatim}
+Stažený kód by se nyní měl nacházet ve složce Lang/. Pro další kroky budeme chtít přejít do složky s Makefile souborem:
+\begin{verbatim}
+cd Lang/cppcompiler/
+\end{verbatim}
+\paragraph{Krok 2:}
+Nyní ze složky \texttt{cppcompiler/} spustíme \texttt{make}. Příkazu \texttt{make} je možné poskytovat argumenty. V aktuální verzi je možné
+poskytnout pouze dva. První je \texttt{BUILD}, kterým specifikujeme, že nechceme, aby výsledný soubor obsahoval debugovací symboly.
+Druhý je \texttt{CXX}, který říká, jaký C++ compiler bude použit. Protože výchozí hodnota pro \texttt{BUILD} je \texttt{debug}, doporučuji
+specifikovat hodnotu \texttt{release}. Pro rychlejší kompilaci použijeme argument \texttt{-j8}, který práci rozdělí mezi více vláken. Příkaz
+vypadá takhle:
+\begin{verbatim}
+make -j8 BUILD=release CXX=clang++
+\end{verbatim}
+\paragraph{Krok 3:}
+Vzniklý soubor se jmenuje \texttt{lang}. Pro spuštění compileru použijeme:
+\begin{verbatim}
+./lang code
+\end{verbatim}
+Pro vypsání tabulky argumentů \texttt{lang} existuje:
+\begin{verbatim}
+./lang code -h
+\end{verbatim}
+Pokud chcete, aby byl příkaz \texttt{lang} přístupný všude, můžete poté soubor přesunout do složky \texttt{/usr/bin/}, nebo jiné složky v
+proměnné prostředí \texttt{PATH}, nebo složku s compilerem do \texttt{PATH} přidat.
 \chapter{Závěr}
 i
 

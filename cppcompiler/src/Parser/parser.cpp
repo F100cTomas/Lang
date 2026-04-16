@@ -7,7 +7,7 @@
 namespace Preparser {
 using Parser::parse, Parser::FnMeta, Parser::LetMeta;
 ASTNode* ParenData::parse_keyword(Symbol* symbol) const {
-	Symbol* inside = parse(_expression.data(), _expression.data() + _expression.size());
+	Symbol* inside = parse(_expression.data(), _expression.data() + _expression.size(), symbol->get_table());
 	symbol->be_suceeded_by(inside);
 	return &inside->get_ast_node();
 }
@@ -15,34 +15,34 @@ ASTNode* ScopeData::parse_keyword(Symbol* symbol) const {
 	ASTNode* op = new ASTNode("{");
 	op->_args.reserve(_statements.size());
 	for (const std::vector<Symbol*>& node: _statements)
-		op->_args.push_back(parse(node.data(), node.data() + node.size()));
+		op->_args.push_back(parse(node.data(), node.data() + node.size(), symbol->get_table()));
 	return op;
 }
 ASTNode* IfData::parse_keyword(Symbol* symbol) const {
 	ASTNode* op = new ASTNode("if");
 	op->_args.reserve(3);
-	op->_args.push_back(parse(_cond.data(), _cond.data() + _cond.size()));
-	op->_args.push_back(parse(_then.data(), _then.data() + _then.size()));
-	op->_args.push_back(parse(_else.data(), _else.data() + _else.size()));
+	op->_args.push_back(parse(_cond.data(), _cond.data() + _cond.size(), symbol->get_table()));
+	op->_args.push_back(parse(_then.data(), _then.data() + _then.size(), symbol->get_table()));
+	op->_args.push_back(parse(_else.data(), _else.data() + _else.size(), symbol->get_table()));
 	return op;
 }
 ASTNode* WhileData::parse_keyword(Symbol* symbol) const {
 	ASTNode* op = new ASTNode("while");
 	op->_args.reserve(2);
-	op->_args.push_back(parse(_cond.data(), _cond.data() + _cond.size()));
-	op->_args.push_back(parse(_body.data(), _body.data() + _body.size()));
+	op->_args.push_back(parse(_cond.data(), _cond.data() + _cond.size(), symbol->get_table()));
+	op->_args.push_back(parse(_body.data(), _body.data() + _body.size(), symbol->get_table()));
 	return op;
 }
 ASTNode* FnData::parse_keyword(Symbol* symbol) const {
 	ASTNode* op   = new ASTNode("fn");
 	op->_metadata = new FnMeta{_name, _args};
-	op->_args.push_back(parse(_body.data(), _body.data() + _body.size()));
+	op->_args.push_back(parse(_body.data(), _body.data() + _body.size(), symbol->get_table()));
 	return op;
 }
 ASTNode* LetData::parse_keyword(Symbol* symbol) const {
 	ASTNode* op   = new ASTNode("let");
 	op->_metadata = new LetMeta{_name};
-	op->_args.push_back(parse(_val.data(), _val.data() + _val.size()));
+	op->_args.push_back(parse(_val.data(), _val.data() + _val.size(), symbol->get_table()));
 	return op;
 }
 std::optional<uint32_t> ParsingNode::precedence() const {
@@ -62,11 +62,10 @@ std::ostream& operator<<(std::ostream& stream, const ASTNode& node) {
 	stream << node._args.size();
 	return stream << ')';
 }
-Symbol* parse(Symbol* const* begin, Symbol* const* end) {
+Symbol* parse(Symbol* const* begin, Symbol* const* end, SymbolTable& table) {
 	using Operators::Type;
 	if (begin >= end) {
-		ERROR("Missing expression");
-		return nullptr;
+		return new Symbol(table, *new ASTNode("0"));
 	}
 	if (begin == end - 1) {
 		return *begin;
@@ -88,10 +87,10 @@ Symbol* parse(Symbol* const* begin, Symbol* const* end) {
 	}
 	ASTNode& op = (*max)->get_ast_node();
 	if ((*max)->get_parsing_node()._op_type == Type::infix || (*max)->get_parsing_node()._op_type == Type::postfix) {
-		op._args.push_back(parse(begin, max));
+		op._args.push_back(parse(begin, max, table));
 	}
 	if ((*max)->get_parsing_node()._op_type == Type::infix || (*max)->get_parsing_node()._op_type == Type::prefix) {
-		op._args.push_back(parse(max + 1, end));
+		op._args.push_back(parse(max + 1, end, table));
 	}
 	return *max;
 }

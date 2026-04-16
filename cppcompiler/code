@@ -1,5 +1,12 @@
+fn number(n) : {
+	if (n >= 10) {
+		number(n / 10);
+	} else {
+	};
+	putchar (48 + n % 10)
+};
+
 fn main() : {
-	while (1) {
-		putchar 65
-	}
+	number 65025;
+	putchar 10
 };

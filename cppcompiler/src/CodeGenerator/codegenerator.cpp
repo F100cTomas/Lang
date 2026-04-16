@@ -237,6 +237,7 @@ void LLVMNode::finalize() {
 	}
 		return;
 	case hashfn("{"): _data._val = children.back()->get_value(); return;
+	case hashfn(" arg"): create_arg(); return;
 	default: break;
 	}
 	if (children.size() > 0) {
@@ -294,6 +295,16 @@ void LLVMNode::create_fn() {
 	_type                = NodeType::fn;
 	Parser::FnMeta& meta = *reinterpret_cast<Parser::FnMeta*>(_symbol->get_ast_node()._metadata);
 	_data._fn            = new LLVMFunction(meta._name, _state);
+	for (Symbol* arg: meta._args) {
+		arg->get_llvm_node(_state, this);
+	}
+}
+void LLVMNode::create_arg() {
+	if (_type != NodeType::none)
+		ERROR("Attempted to overwrite node.");
+	Parser::ArgMeta& meta = *reinterpret_cast<Parser::ArgMeta*>(_symbol->get_ast_node()._metadata);
+	_data._val            = meta._fn->get_llvm_node(_state, nullptr).get_function()->getArg(meta._arg_id);
+	_is_finalized         = true;
 }
 Value* LLVMNode::get_value() {
 	if (_type == NodeType::fn)
@@ -343,6 +354,7 @@ LLVMNode* run(Symbol* symbol, LLVMState& state, LLVMNode* parent) {
 	switch (hashfn(symbol->get_ast_node()._name.get())) {
 	case hashfn("fn"): result->create_fn(); break;
 	case hashfn("let"): result->create_let(); break;
+	case hashfn(" arg"): break;
 	default: break;
 	}
 	return result;

@@ -55,14 +55,14 @@ Tohle je můj projekt pro Maturitu z Informatiky. Jedná se compiler pro můj vl
 - [X] Aritmetické operátory
 - [X] Funkce `putchar`
 ### Listopad / Prosinec
-- [ ] Funkce `getchar`
-- [ ] Funkce s vícero řádky
-- [ ] klíčové slovo `if`
-- [ ] Porovnávací operátory
-- [ ] Logické operátory
-- [ ] Lokální funkce
-- [ ] Globální proměnné
-- [ ] Lokální proměnné
+- [X] Funkce `getchar`
+- [X] Funkce s vícero řádky
+- [X] klíčové slovo `if`
+- [X] Porovnávací operátory
+- [X] Logické operátory
+- [X] Lokální funkce
+- [X] Globální proměnné
+- [X] Lokální proměnné
 ### Leden, Únor...
 Implementace Vedlejších cílů
 - [ ] Funkce o vícero parametrech
@@ -91,7 +91,7 @@ make
 ```
 Spuštení compileru:
 ```sh
-./lang
+./lang <soubor> -o <program>
 ```
 Kód je definován v `code` a výsledný program se jmenuje `program`.
 ### Windows (nedoporučeno)
@@ -110,7 +110,7 @@ make
 ```
 Spuštení compileru:
 ```sh
-./lang
+./lang <soubor> -o <program>
 ```
 Kód je definován v `code` a výsledný program se jmenuje `program`.
 Výsledný soubor vyžaduje některá DLL z MSYS2 a MINGW, takže pokud soubor spouštíte mimo MSYS2, tak je nutné je přidat do souboru s `lang.exe`.
