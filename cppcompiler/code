@@ -1,12 +1,47 @@
-fn number(n) : {
-	if (n >= 10) {
-		number(n / 10);
-	} else {
-	};
-	putchar (48 + n % 10)
+fn fizz(f) : {
+	if (f % 3 == 0) {
+		putchar (102);
+		putchar (105);
+		putchar (122);
+		putchar (122);
+	} else 0;
+};
+
+fn buzz(b) : {
+	if (b % 5 == 0) {
+		putchar (98);
+		putchar (117);
+		putchar (122);
+		putchar (122);
+	} else 0;
+};
+
+fn number(num) : {
+	if (num >= 10) {
+		number (num / 10);
+	} else 0;
+	putchar (48 + num % 10);
+};
+
+fn fizzbuzz1(n1) : {
+	if (n1 % 3 != 0) {
+		fizzbuzz2 (n1);
+	} else 0;
+};
+
+fn fizzbuzz2(n2) : {
+	if (n2 % 5 != 0) {
+		number (n2);
+	} else 0;
 };
 
 fn main() : {
-	number 65025;
-	putchar 10
+	let i = 1;
+	while (i < 100) {
+		fizz (i);
+		buzz (i);
+		fizzbuzz1 (i);
+		putchar (10);
+		i = i + 1;
+	};
 };

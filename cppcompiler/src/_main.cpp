@@ -1,10 +1,15 @@
 #include "module.hpp"
 #include <cstring>
 #include <iostream>
+#ifdef __MINGW64__
+#define DEFAULT_OUTPUT_PATH "program.exe"
+#else
+#define DEFAULT_OUTPUT_PATH "program"
+#endif
 #define REQUIRED_ARGS \
 	REQUIRED_STRING_ARG(input_file, "vstup", "Soubor ke kompilaci")
 #define OPTIONAL_ARGS \
-	OPTIONAL_STRING_ARG(output_file, const_cast<char*>("program"), "-o", "výstup", "Název zkompilovaného souboru")
+	OPTIONAL_STRING_ARG(output_file, const_cast<char*>(DEFAULT_OUTPUT_PATH), "-o", "výstup", "Název zkompilovaného souboru")
 #define BOOLEAN_ARGS \
 	BOOLEAN_ARG(asm_opt, "-a", "Assembly výstup") \
 	BOOLEAN_ARG(debug, "-d", "Debug výstup") \

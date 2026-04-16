@@ -88,7 +88,6 @@ void link(const char* filepath, ObjFile& file) {
 	cmd += " /out:\"";
 	cmd += filepath;
 	cmd += "\" /NODEFAULTLIB /ENTRY:_start /SUBSYSTEM:CONSOLE kernel32.lib";
-	std::cout << cmd << std::endl;
 	system(cmd.c_str());
 #endif
 }
