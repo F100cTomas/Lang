@@ -6,9 +6,16 @@
 \usepackage{microtype}
 \usepackage{cmbright}
 \usepackage{geometry}
-\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{minted}
+\usepackage{tikz}
 \geometry{margin=5em}
-
+\usetikzlibrary{positioning}
+\usetikzlibrary{matrix}
+\setminted{
+    fontsize=\small
+}
 \title{Compiler vlastního programovacího jazyka}
 \author{Ondřej Suk}
 \date{\today}
@@ -21,8 +28,8 @@
 Práce se zabývá vytvářením jednoduchého compileru programovacího jazyka vytvořeného specificky pro tento projekt za pomocí knihovny LLVM.
 Jazyk samotný je velmi jednoduchý a je velmi obtížné v něm programovat složitější programy. Důvodem je, že i v aktuálním stavu je projekt poměrně
 rozsáhlý a tudíž obsahuje jenom minimum, aby v něm bylo možné programovat. Některé části jazyka jsou navrženy netradičním způsobem, což je z důvodu,
-že na projektu plánuji pracovat i po maturitní zkoušce, tudíž jsem kód přizpůsobil tomu, jak plánuji, aby fungoval finální jazyk. Dále je to z
-důvodu, že jsem chtěl problémy, které projekt zahrnoval řešit sám, nikoli kopírovat řešení ostatních.
+že na projektu plánuji pracovat i po maturitní zkoušce, tudíž jsem kód přizpůsobil tomu, jak plánuji, aby fungoval finální jazyk. Dalším důvodem je,
+že jsem chtěl problémy, které projekt zahrnoval řešit sám, nikoli kopírovat řešení ostatních.
 
 Compiler jsem implementoval v jazyce C++ 17. Vstupem compileru je soubor s kódem. Ten je potom přeložen do LLVM IR, jazyka poskytovaného knihovnou
 LLVM, ze kterého je pak zkompilován na binární kód. Z binárního kódu nakonec vznikne spustitelný soubor. Kompilace z LLVM IR na binární kód je již
@@ -35,25 +42,342 @@ součástí knihovny LLVM, tudíž se hlavní část projektu zabývá překlade
 \chapter{Úvod}
 Cílem projektu bylo vytvořit compiler jednoduchého jazyka, který bude sloužit jako základ mnohem pokročilejšího jazyka, na kterém plánuji
 pracovat po maturitě. Z toho důvodu je celý projekt přizpůsobený mé trochu netradiční vizi pro syntax finálního jazyka. Při tvorbě projektu
-jsem chtěl oběvovat nové koncepty sám, takže se výsledek může lišit od běžných compilerů. V jazyce tedy není v aktuálním stavu snadné programovat
+jsem chtěl objevovat nové koncepty sám, takže se výsledek může lišit od běžných compilerů. V jazyce tedy není v aktuálním stavu snadné programovat
 a mnoho věcí, které by programátor  očekával chybí. To je v souladu s cílem projektu, protože plně rozsáhlý programovací jazyk by potřeboval
 množství času mnohem vyšší, než je v rámci maturitního projektu možné.
 
-Již zpočátku bylo jasné, že použiji knihovnu LLVM. LLVM slouží jako zaáklad mnoha moderních compilerů. Poskytuje jazyk zvaný LLVM IR, do kterého
+Již zpočátku bylo jasné, že použiji knihovnu LLVM. LLVM slouží jako základ mnoha moderních compilerů. Poskytuje jazyk zvaný LLVM IR, do kterého
 compiler přeloží vstupní kód. LLVM pak může kód zkompilovat pro kteroukoli cílovou platformu, takže je práce pro podporu mnoha platforem snažší.
 Navíc dokáže LLVM vzniklý kód optimalizovat. Jako programovací jazyk jsem si vybral C++, protože LLVM, je primárně knihovnou pro jazyk C++.
 Specificky je LLVM napsáno pro C++ 17, a tak jsem i já použil C++ 17. Běh programu jsem strukturoval na několik fází a kostru, která ty fáze spojuje.
-Každá fáze se nachází ve vlastní složce, zatímco kostra je rovnou ve složce se zdrojovým kódem.
 
 Hotový projekt tedy napřed přečte soubor s kódem a postupně během několika fází z něj extrahuje všechny důležité informace. Na základě těch informací
 pak napíše program přeložený do jazyka LLVM IR. Poslední fáze potom zavolá knihovnu LLVM a ta z LLVM IR vytvoří binární kód specifický pro cílovou
 platformu. Následně pak z binárního kódu vytvoří spustitelný soubor. (Na Windows soubor s příponou .exe)
 
-Hlavní část dokumentace je rozdělena na dvě části. Programátorská dokumntace se zabývá samotným compilerem. Popisuje detailně jednotlivé fáze
+Hlavní část dokumentace je rozdělena na dvě části. Programátorská dokumentace se zabývá samotným compilerem. Popisuje detailně jednotlivé fáze
 kompilace, a proč jsem některé věci navrhl určitým způsobem. Měla by poskytovat vše důležité pro další práci na projektu. Uživatelská dokumentace
 se zaměřuje na samotný jazyk a vše, co obsahuje.
 \chapter{Programátorská dokumentace}
+\section{Použité technologie nástroje}
+Níže je seznam použitých nástrojů. Je člěněn na tři části. První oddíl obsahuje nástroje, které mají v projektu viditelnou stopu. Druhý je věnovám nástrojům,
+kterých jsem využil při programování na Linuxu, ale místo nich je k editaci projektu snadné dosadit nástroje jiné. Poslední oddíl se věnuje mému přístupu k
+umělé inteligenci při práci na projektu.
+\subsection{Unitř projektu}
+\paragraph{\href{https://llvm.org/}{LLVM}}
+LLVM je knihovna jazyka C++, která slouží jako základ compileru. Definuje jazyk LLVM IR, který je nízkoúrovňovou, ale zároveň platformově nezávislou
+reprezentaci kompilovaného kódu.
+\paragraph{\href{https://lld.llvm.org/}{LLD}}
+LLD je linker, který je součástí projektu LLVM. Linker zpracovává soubory s binárními instrukcemi a vytváří z nich spustitelné soubory. (.exe soubory)
+\paragraph{\href{https://github.com/gouwsxander/easy-args}{Easyargs}}
+Knihovnu Easyargs jsem použil hlavně, protože poskytuje nenáročné rozhraní pro definování argumentů příkazového řádku. Uživatelské rozhraní nepovažuji
+za důležitou část projektu, tudíž jsem vybral jednoduchou knihovnu.
+\paragraph{\href{https://www.gnu.org/software/make/manual/make.html}{Makefile}}
+Makefile je systém, pomocí kterého jsem vytvořil kompilační script pro tento projekt. Vybral jsem si ho, protože narozdíl od jiných C++ build systémů
+umožňuje Makefile specifikovat přesně ty příkazy, které budou při kompilaci projektu použity.
+\paragraph{\href{https://www.mingw-w64.org/}{MinGW}}
+MinGW je port nástrojů příkazového řádku Linuxu pro Windows. Podrobnosti, jak jsem MinGW použil jsou v pozdější části dokumentace.
+\paragraph{\href{https://clang.llvm.org/}{Clang}}
+Jako C++ compiler jsem si vybral Clang, protože je součástí LLVM, a protože poskytuje nástroje Clang Format a Clang Tidy, které jsem také použil.
+\paragraph{\href{https://clang.llvm.org/docs/ClangFormat.html}{Clang Format}}
+Clang Format je nástroj, díky který zajišťuje, že všechen kód v projektu je správně zformátovaný.
+\paragraph{\href{https://clang.llvm.org/extra/clang-tidy/}{Clang Tidy}}
+Clang Tidy je nástroj, který pomáhá s hledáním chyb v kódu ještě před tím, než je vůbec zkompilován.
+\paragraph{\href{https://git-scm.com/}{Git}}
+Pro zálohování změn v projektu jsem využil Git a projekt je veřejně viditelný přes \href{https://github.com/F100cTomas/Lang}{repozitář na GitHubu}.
+\paragraph{\href{https://www.latex-project.org/}{\LaTeX}}
+\LaTeX je můj primární nástroj pro psaní dokumentace.
+\subsection{Pro vývoj na Linuxu}
+\paragraph{\href{https://neovim.io/}{Neovim}}
+Neovim sloužil jako můj primární editor pro psaní kódu, hlavně tedy C++.
+\paragraph{\href{https://apps.kde.org/kate/}{Kate}}
+Kate sloužiljako můj sekundární editor pro psaní kódu. Psal jsem v něm hlavně kompilační skript a testovací programy. Vybral jsem si ho, protože
+je výchozím editorem pro KDE desktop.
+\paragraph{\href{https://apps.kde.org/kile/}{Kile}}
+Kile sloužiljako můj editor pro psaní dokumentace. Vybral jsem si ho, protože je výchozím \LaTeX\ editorem pro KDE desktop.
+\paragraph{\href{https://lldb.llvm.org/}{LLDB}}
+LLDB je debugger, který jsem použil jako poslední možnost při diagnóze chyb v kódu, převážně segmentačních chyb. Vybral jsem si ho, protože je součástí LLVM.
+\paragraph{\href{https://archlinux.org/}{Arch Linux}}
+Arch Linux je Linux distribuce, na které probíhala většina vývoje. Použil jsem ho, protože je již mým primárním operačním systémem.
+\subsection{Pro vývoj na Windows}
+\paragraph{\href{https://www.qemu.org/}{QEMU}}
+Protože nemám doma dostupný počítač s instalací Windows, probíhal téměř veškerý vývoj pro Windows uvnitř virtuálního prostředí Windows 11 v QEMU. Je nutné
+podotknout, že to nebyla ideální volba, která vedla k častému zamrzání obrazovky a dalším nepříjemnostem.
+\paragraph{\href{https://notepad-plus-plus.org/}{Notepad++}}
+Notepad++ jsem si vybral, protože se jedná o dobře optimalizovaný editor. Nechtěl jsem totiž své již tak omezené Windows prostředí zbytečně zatěžovat.
+\subsection{Ohledně AI}
+Přestože projekt neobsahuje jediný řádek C++ napsaný AI, měla umělá inteligence v mém projektu zásadní roli. Jako poskytovatele AI jsem si vybral ChatGPT,
+protože jsem ChatGPT používal už před začátkem projektu. Hlavní roli měla AI v debugování kódu. Umělá inteligence má totiž nadlidskou schopnost hledat hrubky.
+Dále mi umělá inteligence pomohla pochopit věci, které jsem se v rámci projektu učil nově. Na sepsání souboru Makefile se hodně podílelo AI.
+\section{Základní struktura}
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=2mm,
+    every node/.style={draw, rectangle, rounded corners, minimum width=3mm, minimum height=12mm, align=center},
+    end/.style={draw, circle, minimum width=16mm, minimum height=1mm, align=center},
+    arrow/.style={->, thick}
+]
+\scriptsize
+\node[end] (source) {Zdrojový \\ kód};
+\node (lexer) [right=of source] {Tokenizace \\ (Lexer)};
+\node (preparser) [right=of lexer] {Prvotní parsování \\ (Preparser)};
+\node (parser) [right=of preparser] {Finální parsování \\ (Parser)};
+\node (codegenerator) [right=of parser] {Generace LLVM IR \\ (Code Generator)};
+\node (llvminterface) [right=of codegenerator] {Kompilace LLVM IR \\ (LLVM Interface)};
+\node[end] (exe) [right=of llvminterface] {Spustitelný \\ soubor};
+\draw[arrow] (source) -- (lexer);
+\draw[arrow] (lexer) -- (preparser);
+\draw[arrow] (preparser) -- (parser);
+\draw[arrow] (parser) -- (codegenerator);
+\draw[arrow] (codegenerator) -- (llvminterface);
+\draw[arrow] (llvminterface) -- (exe);
+\end{tikzpicture}
+\caption{Jednotlivé fáze compileru}
+\end{figure}
+Projekt je rozdělen do modulární struktury, kde jednotlivé části
+kompilátoru jsou implementovány jako nezávislé komponenty.
+\section{Způsob psaní kódu}
+Kód je psán modulárně s důrazem na čitelnost, oddělení odpovědností
+a snadnou rozšiřitelnost.
+\section{Kostra}
+Jádro systému obsahuje základní datové struktury a komponenty
+nezbytné pro reprezentaci a zpracování programu.
+\subsection{Hlavní soubor}
+Níže naleznete celý hlavní soubor. Nejdříve importuje tři knihovny.
+\begin{listing}[H]
+\caption{Celý hlavní soubor}
+\inputminted[breaklines]{cpp}{../cppcompiler/src/_main.cpp}
+\end{listing}
+\subsection{Třída \texttt{Module} a další pomocné třídy}
+Třída Module reprezentuje jednotku překladu a obsahuje všechny
+globální struktury programu.
+\subsection{Symboly a Tabulky symbolů}
+Symbolová tabulka uchovává informace o identifikátorech, jejich typech
+a rozsazích platnosti v programu.
+\section{Tokenizace (Lexer)}
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.4\linewidth}
+\centering
+\textbf{Zdrojový kód, jak jej vidí uživatel}
+\medskip
+\large
+\begin{verbatim}
+fn num(n) : {
+    if (n >= 10) {
+        num(n / 10);
+    };
+    putchar(48+n%10);
+};
+\end{verbatim}
+\vspace{6mm}
+\end{minipage}
+\begin{minipage}{\linewidth}
+\centering
+\textbf{Zdrojový kód před tokenizací}
+\medskip
+\begin{tikzpicture}
+\matrix [matrix of nodes,
+    nodes={draw, minimum width=8mm, minimum height=8mm,
+           text height=1.5ex, text depth=.25ex},
+    column sep=0.5mm, row sep=0.5mm] {
+f & n & \phantom{X} & n & u & m & ( & n & ) & \phantom{X} & : & \phantom{X} & \{ & \phantom{X} \\
+\phantom{X} & i & f & \phantom{X} & ( & n & \phantom{X} & > & = & \phantom{X} & 1 & 0 & ) & \phantom{X} & \{ & \phantom{X}  \\
+\phantom{X} & \phantom{X} & n & u & m & ( & n & \phantom{X} & / & \phantom{X} & 1 & 0 & ) & ; & \phantom{X}  \\
+\phantom{X} & \} & ; & \phantom{X} \\
+\phantom{X} & p & u & t & c & h & a & r & ( & 4 & 8 & + & n & \% & 1 & 0 & ) & ; & \phantom{X}  \\
+\} & ; & \phantom{X}  \\
+};
+\end{tikzpicture}
+\vspace{6mm}
+\end{minipage}
+\begin{minipage}{\linewidth}
+\centering
+\textbf{Zdrojový kód po tokenizaci}
+\medskip
+\begin{tikzpicture}
+\matrix [matrix of nodes,
+    nodes={draw, minimum width=16.5mm, minimum height=5mm,
+           text height=1.5ex, text depth=.25ex},
+    column sep=1mm, row sep=1mm] {
+fn & num & ( & n & ) & : & \{ \\
+if & ( & n & >= & 10 & ) & \{ \\
+num & ( & n & / & 10 & ) & ; \\
+\} & ; \\
+putchar & ( & 48 & + & n & \% & 10 & ) & ; \\
+\} & ; \\
+};
+\end{tikzpicture}
+\end{minipage}
+\caption{Character-level vs.\ token-level representation of a program.}
+\end{figure}
+Lexikální analýza provádí rozdělení vstupního kódu na základní lexémy,
+které slouží jako vstup pro další fáze kompilace.
+\section{První fáze parsování (Preparser)}
+První fáze parsování zajišťuje klasifikaci lexémů a vytvoření
+symbolové tabulky včetně rozpoznání klíčových slov.
 
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+value/.style={rectangle, draw=blue!60, fill=blue!5, very thick, minimum size=8mm},
+infix/.style={rectangle, draw=red!60, fill=red!5, very thick, minimum size=8mm},
+empty/.style={rectangle, draw=black!60, fill=white!5, very thick, minimum size=8mm, dotted},
+]
+\node[value] (fn) {fn};
+\node[value] (curly1) [above=of fn] {\{};
+\node[value] (if) [above=of curly1] {if};
+\matrix (m1) [above=of if, matrix of nodes,
+              nodes={draw, minimum size=6mm, anchor=center}] {
+  |[value]| n & |[infix]| >= & |[value]| 10 \\
+};
+\node[value] (curly2) [right=of m1] {\{};
+\matrix (m2) [above=of curly2, matrix of nodes,
+              nodes={draw, minimum size=6mm, anchor=center}] {
+  |[value]| num & |[infix]| \phantom{X} & |[value]| ( \\
+};
+\matrix (m3) [above=of m2-1-3, matrix of nodes,
+              nodes={draw, minimum size=6mm, anchor=center}] {
+  |[value]| n & |[infix]| / & |[value]| 10 \\
+};
+\node[empty] (empty1) [right=of m2] {\phantom{X}};
+\node[empty] (empty2) [below=of empty1] {\phantom{X}};
+\matrix (m4) [right=of empty2, matrix of nodes,
+              nodes={draw, minimum size=6mm, anchor=center}] {
+  |[value]| putchar & |[infix]| \phantom{X} & |[value]| ( \\
+};
+\matrix (m5) [above=of m4-1-3, matrix of nodes,
+              nodes={draw, minimum size=6mm, anchor=center}] {
+  |[value]| 48 & |[infix]| + & |[value]| n & |[infix]| \% & |[value]| 10 \\
+};
+\node[empty] (empty3) [below=of m4] {\phantom{X}};
+\draw[->, very thick] (fn.north) -- (curly1.south);
+\draw[->, very thick] (curly1.north) -- (if.south);
+\draw[->, very thick] (if.north) -- (m1.south);
+\draw[->, very thick, bend right=25] (if.east) to (curly2.south);
+\draw[->, very thick] (curly2.north) to (m2);
+\draw[->, very thick, bend left=10] (curly2.east) to (empty1.west);
+\draw[->, very thick, bend right=25] (if.east) to (empty2.west);
+\draw[->, very thick] (m2-1-3) to (m3);
+\draw[->, very thick, bend right=25] (curly1.east) to (m4);
+\draw[->, very thick] (m4-1-3) to (m5);
+\draw[->, very thick, bend right=20] (curly1.east) to (empty3);
+
+\end{tikzpicture}
+
+\caption{Hierarchical token structure with branching control flow and grouped token arrays.}
+\end{figure}
+\section{Druhá fáze parsování (Parser)}
+Druhá fáze parsování převádí normalizovaný tok tokenů do abstraktního
+syntaktického stromu (AST).
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+node/.style={circle, draw=black!60, fill=white!5, very thick, minimum size=4mm},
+]
+\node[node] (fn) {fn};
+\node[node] (curly1) [above=of fn] {\{};
+\matrix (m1) [above=of curly1, matrix of nodes,
+              nodes={draw, minimum size=6mm, anchor=center}, column sep = 10mm] {
+  |[node]| if & |[node]| \phantom{X} & |[node]| 0 \\
+};
+
+\matrix (m2) [above=of m1, matrix of nodes,
+              nodes={draw, minimum size=6mm, anchor=center}, column sep = 10mm] {
+  |[node]| >= & |[node]| \{ & |[node]| 0 & |[node]| putchar & |[node]| + \\
+};
+\matrix (m3) [above=of m2, matrix of nodes,
+              nodes={draw, minimum size=6mm, anchor=center}, column sep = 10mm] {
+  |[node]| n & |[node]| 10 & |[node]| \phantom{X} & |[node]| 0 & |[node]| 48 & |[node]| \% \\
+};
+\matrix (m4) [above=of m3-1-3, matrix of nodes,
+              nodes={draw, minimum size=6mm, anchor=center}, column sep = 10mm] {
+  |[node]| num & |[node]| / \\
+};
+\matrix (m5) [above=of m3-1-6, matrix of nodes,
+              nodes={draw, minimum size=6mm, anchor=center}, column sep = 10mm] {
+  |[node]| n & |[node]| 10\\
+};
+\matrix (m6) [above=of m4-1-2, matrix of nodes,
+              nodes={draw, minimum size=6mm, anchor=center}, column sep = 10mm] {
+  |[node]| n & |[node]| 10\\
+};
+\draw[->, very thick] (fn) -- (curly1);
+\draw[->, very thick] (curly1) -- (m1-1-1);
+\draw[->, very thick] (curly1) -- (m1-1-2);
+\draw[->, very thick] (curly1) -- (m1-1-3);
+\draw[->, very thick] (m1-1-1) -- (m2-1-1);
+\draw[->, very thick] (m1-1-1) -- (m2-1-2);
+\draw[->, very thick] (m1-1-1) -- (m2-1-3);
+\draw[->, very thick] (m1-1-2) -- (m2-1-4);
+\draw[->, very thick] (m1-1-2) -- (m2-1-5);
+\draw[->, very thick] (m2-1-1) -- (m3-1-1);
+\draw[->, very thick] (m2-1-1) -- (m3-1-2);
+\draw[->, very thick] (m2-1-2) -- (m3-1-3);
+\draw[->, very thick] (m2-1-2) -- (m3-1-4);
+\draw[->, very thick] (m2-1-5) -- (m3-1-5);
+\draw[->, very thick] (m2-1-5) -- (m3-1-6);
+\draw[->, very thick] (m3-1-3) -- (m4-1-1);
+\draw[->, very thick] (m3-1-3) -- (m4-1-2);
+\draw[->, very thick] (m3-1-6) -- (m5-1-1);
+\draw[->, very thick] (m3-1-6) -- (m5-1-2);
+\draw[->, very thick] (m4-1-2) -- (m6-1-1);
+\draw[->, very thick] (m4-1-2) -- (m6-1-2);
+\end{tikzpicture}
+
+\caption{Hierarchical token structure with branching control flow and grouped token arrays.}
+\end{figure}
+\section{Generace LLVM IR (Code Generator)}
+Generace LLVM IR převádí AST do mezikódu LLVM, který je následně
+použit pro finální kompilaci.
+\begin{listing}[H]
+\begin{minted}{LLVM}
+define i64 @num(i64 %0) {
+  %2 = icmp sge i64 %0, 10
+  %3 = zext i1 %2 to i64
+  %4 = icmp ne i64 %3, 0
+  br i1 %4, label %5, label %8
+
+5:                                                ; preds = %1
+  %6 = sdiv i64 %0, 10
+  %7 = call i64 @num(i64 %6)
+  br label %9
+
+8:                                                ; preds = %1
+  br label %9
+
+9:                                                ; preds = %8, %5
+  %10 = phi i64 [ 0, %5 ], [ 0, %8 ]
+  %11 = srem i64 %0, 10
+  %12 = add i64 48, %11
+  %13 = call i64 @putchar(i64 %12)
+  ret i64 0
+}
+\end{minted}
+\caption{Funkce num(n) zkompilovaná do LLVM IR}
+\end{listing}
+\section{Rozhraní pro LLVM (LLVM Interface)}
+Tato vrstva abstrahuje LLVM API a poskytuje jednodušší rozhraní
+pro generování IR kódu.
+\section{Problémy s Windows}
+Podpora Windows byla komplikována rozdíly v toolchainu a odlišnostmi
+oproti Linuxovému vývojovému prostředí.
+\subsection{První pokus -- Visual Studio}
+První pokus o vývoj na Windows byl proveden ve Visual Studiu,
+které však nebylo vhodné pro LLVM-based workflow.
+\subsection{Druhý pokus -- Terminál}
+Druhý přístup využíval terminálové prostředí, které poskytlo lepší
+kontrolu nad build procesem.
+\subsection{Třetí pokus -- MinGW}
+MinGW bylo použito jako alternativní toolchain pro kompatibilitu
+s Linuxovým build systémem.
+\subsection{Změny v kódu}
+Pro zajištění kompatibility mezi platformami byly provedeny úpravy
+v build systému a části kódu závislé na OS.
+\subsection{Nedostatky Windows verze}
+Windows verze má omezení v oblasti kompatibility toolchainu a
+debuggingu oproti Linuxové verzi.
 \chapter{Uživatelská dokumentace}
 \section{Instalace a spuštění}
 Předpokladem k používání jazyka je mít projekt nainstalovaný.
@@ -68,7 +392,6 @@ Následuje vysvětlení postupu kompilace pro Linux. Aktuálně není na GitHubu
  \item LLD
  \item Příkazový řádek
 \end{itemize}
-
 \paragraph{Krok 1:}
 Nejprve je důležité mít kód stažený. Zde použijeme rozhraní Gitu pro příkazový řádek, ale je také možné využít různých grafických rozhraní, která
 dokáží udělat to stejné. Alternativou ke Gitu by bylo si projekt z GitHubu stáhnout jako .zip archiv. Otevřeme si tedy náš příkazový řádek a ke stažení si projektu použijeme příkaz:
@@ -99,7 +422,18 @@ Pro vypsání tabulky argumentů \texttt{lang} existuje:
 \end{verbatim}
 Pokud chcete, aby byl příkaz \texttt{lang} přístupný všude, můžete poté soubor přesunout do složky \texttt{/usr/bin/}, nebo jiné složky v
 proměnné prostředí \texttt{PATH}, nebo složku s compilerem do \texttt{PATH} přidat.
+\subsection{Kompilace na Windows}
+\section{Uživatelské rozhraní}
+\section{Funkce}
+\section{Operátory}
+\section{Klíčové slovo \texttt{if}}
+\section{Klíčové slovo \texttt{while}}
+\section{proměnné}
 \chapter{Závěr}
-i
+Téměř celý projekt se mi podařilo dokončit jen s minimálními problémy. Projekt funguje a věřím, že budu schopný na jazyku dále pracovat.
+Největší problém celého projektu, který jsem ještě nevyřešil, je vymyslet jazyku jméno. Při práci na jazyku jsem zvážil mnoho jmen, žádné
+však nesplňovalo mé představy. Druhou největší překážkou, ve které jsem byl trochu úspěšnější, bylo sepsání dokumentace.
 
+Jsem poněkud zklamán, že mi čas nedovolil implementovat některé mé vedlejší cíle, ale zato jsem rád, že jsem nebyl s vyjímkou dokumentace v mém
+časovém plánu příliš optimistický. Co můj projekt dále čeká je přidání skutečného typového systému, který zásadně rozšíří schopnosti mého jazyka.
 \end{document}

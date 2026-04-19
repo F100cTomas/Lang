@@ -9,3 +9,4 @@ cppcompiler/kernel32.lib
 doc/*
 !doc/*.tex
 !doc/*.md
+!doc/*.pdf
