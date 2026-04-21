@@ -1,13 +1,15 @@
-\documentclass[12pt, a4paper, titlepage]{scrreprt}
+\documentclass[12pt, a4paper, titlepage, abstract=on]{scrreprt}
 
 \usepackage[utf8]{inputenc}
 \usepackage[czech]{babel}
 \usepackage[T1]{fontenc}
 \usepackage{microtype}
 \usepackage{cmbright}
+\usepackage{csquotes}
 \usepackage{geometry}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{tabularx}
 \usepackage{minted}
 \usepackage{tikz}
 \geometry{margin=5em}
@@ -27,13 +29,11 @@
 \begin{abstract}
 Práce se zabývá vytvářením jednoduchého compileru programovacího jazyka vytvořeného specificky pro tento projekt za pomocí knihovny LLVM.
 Jazyk samotný je velmi jednoduchý a je velmi obtížné v něm programovat složitější programy. Důvodem je, že i v aktuálním stavu je projekt poměrně
-rozsáhlý a tudíž obsahuje jenom minimum, aby v něm bylo možné programovat. Některé části jazyka jsou navrženy netradičním způsobem, což je z důvodu,
-že na projektu plánuji pracovat i po maturitní zkoušce, tudíž jsem kód přizpůsobil tomu, jak plánuji, aby fungoval finální jazyk. Dalším důvodem je,
-že jsem chtěl problémy, které projekt zahrnoval řešit sám, nikoli kopírovat řešení ostatních.
+rozsáhlý a tudíž obsahuje jenom minimum, aby v něm bylo možné programovat. Některé části jazyka jsou navrženy netradičním způsobem, což je z důvodu, že na projektu plánuji pracovat i po maturitní zkoušce, tudíž jsem kód přizpůsobil tomu, jak plánuji, aby fungoval finální jazyk.
 
 Compiler jsem implementoval v jazyce C++ 17. Vstupem compileru je soubor s kódem. Ten je potom přeložen do LLVM IR, jazyka poskytovaného knihovnou
-LLVM, ze kterého je pak zkompilován na binární kód. Z binárního kódu nakonec vznikne spustitelný soubor. Kompilace z LLVM IR na binární kód je již
-součástí knihovny LLVM, tudíž se hlavní část projektu zabývá překladem souboru s programem na LLVM IR.
+LLVM, ze kterého je pak zkompilován na objektový kód. Z objektového kódu nakonec vznikne spustitelný soubor. Kompilace z LLVM IR na binární kód je
+již součástí knihovny LLVM, tudíž se hlavní část projektu zabývá překladem souboru s programem na LLVM IR.
 \end{abstract}
 
 \tableofcontents
@@ -43,12 +43,12 @@ součástí knihovny LLVM, tudíž se hlavní část projektu zabývá překlade
 Cílem projektu bylo vytvořit compiler jednoduchého jazyka, který bude sloužit jako základ mnohem pokročilejšího jazyka, na kterém plánuji
 pracovat po maturitě. Z toho důvodu je celý projekt přizpůsobený mé trochu netradiční vizi pro syntax finálního jazyka. Při tvorbě projektu
 jsem chtěl objevovat nové koncepty sám, takže se výsledek může lišit od běžných compilerů. V jazyce tedy není v aktuálním stavu snadné programovat
-a mnoho věcí, které by programátor  očekával chybí. To je v souladu s cílem projektu, protože plně rozsáhlý programovací jazyk by potřeboval
+a mnoho věcí, které by programátor očekával, chybí. To je v souladu s cílem projektu, protože plně rozsáhlý programovací jazyk by potřeboval
 množství času mnohem vyšší, než je v rámci maturitního projektu možné.
 
 Již zpočátku bylo jasné, že použiji knihovnu LLVM. LLVM slouží jako základ mnoha moderních compilerů. Poskytuje jazyk zvaný LLVM IR, do kterého
-compiler přeloží vstupní kód. LLVM pak může kód zkompilovat pro kteroukoli cílovou platformu, takže je práce pro podporu mnoha platforem snažší.
-Navíc dokáže LLVM vzniklý kód optimalizovat. Jako programovací jazyk jsem si vybral C++, protože LLVM, je primárně knihovnou pro jazyk C++.
+compiler přeloží vstupní kód. LLVM pak může kód zkompilovat pro kteroukoli cílovou platformu, takže je práce pro podporu mnoha platforem snazší.
+Navíc dokáže LLVM vzniklý kód optimalizovat. Jako programovací jazyk jsem si vybral C++, protože LLVM je primárně knihovnou pro jazyk C++.
 Specificky je LLVM napsáno pro C++ 17, a tak jsem i já použil C++ 17. Běh programu jsem strukturoval na několik fází a kostru, která ty fáze spojuje.
 
 Hotový projekt tedy napřed přečte soubor s kódem a postupně během několika fází z něj extrahuje všechny důležité informace. Na základě těch informací
@@ -60,10 +60,10 @@ kompilace, a proč jsem některé věci navrhl určitým způsobem. Měla by pos
 se zaměřuje na samotný jazyk a vše, co obsahuje.
 \chapter{Programátorská dokumentace}
 \section{Použité technologie nástroje}
-Níže je seznam použitých nástrojů. Je člěněn na tři části. První oddíl obsahuje nástroje, které mají v projektu viditelnou stopu. Druhý je věnovám nástrojům,
+Níže je seznam použitých nástrojů. Je členěn na tři části. První oddíl obsahuje nástroje, které mají v projektu viditelnou stopu. Druhý je věnován nástrojům,
 kterých jsem využil při programování na Linuxu, ale místo nich je k editaci projektu snadné dosadit nástroje jiné. Poslední oddíl se věnuje mému přístupu k
 umělé inteligenci při práci na projektu.
-\subsection{Unitř projektu}
+\subsection{Uvnitř projektu}
 \paragraph{\href{https://llvm.org/}{LLVM}}
 LLVM je knihovna jazyka C++, která slouží jako základ compileru. Definuje jazyk LLVM IR, který je nízkoúrovňovou, ale zároveň platformově nezávislou
 reprezentaci kompilovaného kódu.
@@ -73,14 +73,14 @@ LLD je linker, který je součástí projektu LLVM. Linker zpracovává soubory 
 Knihovnu Easyargs jsem použil hlavně, protože poskytuje nenáročné rozhraní pro definování argumentů příkazového řádku. Uživatelské rozhraní nepovažuji
 za důležitou část projektu, tudíž jsem vybral jednoduchou knihovnu.
 \paragraph{\href{https://www.gnu.org/software/make/manual/make.html}{Makefile}}
-Makefile je systém, pomocí kterého jsem vytvořil kompilační script pro tento projekt. Vybral jsem si ho, protože narozdíl od jiných C++ build systémů
+Makefile je systém, pomocí kterého jsem vytvořil kompilační script pro tento projekt. Vybral jsem si ho, protože na rozdíl od jiných C++ build systémů
 umožňuje Makefile specifikovat přesně ty příkazy, které budou při kompilaci projektu použity.
 \paragraph{\href{https://www.mingw-w64.org/}{MinGW}}
 MinGW je port nástrojů příkazového řádku Linuxu pro Windows. Podrobnosti, jak jsem MinGW použil jsou v pozdější části dokumentace.
 \paragraph{\href{https://clang.llvm.org/}{Clang}}
 Jako C++ compiler jsem si vybral Clang, protože je součástí LLVM, a protože poskytuje nástroje Clang Format a Clang Tidy, které jsem také použil.
 \paragraph{\href{https://clang.llvm.org/docs/ClangFormat.html}{Clang Format}}
-Clang Format je nástroj, díky který zajišťuje, že všechen kód v projektu je správně zformátovaný.
+Clang Format je nástroj, díky kterému zajišťuje, že všechen kód v projektu je správně zformátovaný.
 \paragraph{\href{https://clang.llvm.org/extra/clang-tidy/}{Clang Tidy}}
 Clang Tidy je nástroj, který pomáhá s hledáním chyb v kódu ještě před tím, než je vůbec zkompilován.
 \paragraph{\href{https://git-scm.com/}{Git}}
@@ -91,10 +91,10 @@ Pro zálohování změn v projektu jsem využil Git a projekt je veřejně vidit
 \paragraph{\href{https://neovim.io/}{Neovim}}
 Neovim sloužil jako můj primární editor pro psaní kódu, hlavně tedy C++.
 \paragraph{\href{https://apps.kde.org/kate/}{Kate}}
-Kate sloužiljako můj sekundární editor pro psaní kódu. Psal jsem v něm hlavně kompilační skript a testovací programy. Vybral jsem si ho, protože
+Kate sloužil jako můj sekundární editor pro psaní kódu. Psal jsem v něm hlavně kompilační skript a testovací programy. Vybral jsem si ho, protože
 je výchozím editorem pro KDE desktop.
 \paragraph{\href{https://apps.kde.org/kile/}{Kile}}
-Kile sloužiljako můj editor pro psaní dokumentace. Vybral jsem si ho, protože je výchozím \LaTeX\ editorem pro KDE desktop.
+Kile sloužil jako můj editor pro psaní dokumentace. Vybral jsem si ho, protože je výchozím \LaTeX\ editorem pro KDE desktop.
 \paragraph{\href{https://lldb.llvm.org/}{LLDB}}
 LLDB je debugger, který jsem použil jako poslední možnost při diagnóze chyb v kódu, převážně segmentačních chyb. Vybral jsem si ho, protože je součástí LLVM.
 \paragraph{\href{https://archlinux.org/}{Arch Linux}}
@@ -108,8 +108,33 @@ Notepad++ jsem si vybral, protože se jedná o dobře optimalizovaný editor. Ne
 \subsection{Ohledně AI}
 Přestože projekt neobsahuje jediný řádek C++ napsaný AI, měla umělá inteligence v mém projektu zásadní roli. Jako poskytovatele AI jsem si vybral ChatGPT,
 protože jsem ChatGPT používal už před začátkem projektu. Hlavní roli měla AI v debugování kódu. Umělá inteligence má totiž nadlidskou schopnost hledat hrubky.
-Dále mi umělá inteligence pomohla pochopit věci, které jsem se v rámci projektu učil nově. Na sepsání souboru Makefile se hodně podílelo AI.
+Dále mi umělá inteligence pomohla pochopit věci, které jsem se v rámci projektu učil nově. AI se hodně podílela na sepsání Makefile.
 \section{Základní struktura}
+Projekt je rozdělen na dvě hlavní části. První je kostra, která definuje základní běh programu, a druhá jsou jednotlivé fáze, které implementují
+jednoduché rozhraní pro konverzi kódu z jedné reprezentace na druhou. Tyto reprezentace jsou si docela blízké, ale jejich vrstvením dokážou
+zdrojový kód přetvořit na velice rozdílnou formu, spustitelný soubor.
+
+Ve složce s compilerem se nachází několik důležitých souborů. Prvním je \texttt{Makefile}, který obsahuje skript, pomocí kterého je možné
+celý projekt zkompilovat. Dále se zde nachází \texttt{.clang-format} a \texttt{.clang-tidy}, které obsahují konfigurace pro nástroje
+používané při vývoji. Méně důležitým souborem je \texttt{kernel32.def}, který obsahuje seznam všech Windows API funkcí, které může zkompilovaný
+projekt zavolat. \texttt{kernel32.def} existuje pouze kvůli kompatibilitě s Windows. V poslední řadě tu je soubor \texttt{code}, který by
+vždy měl obsahovat příkladový program k testování projektu.
+
+Všechen zdrojový kód compileru se nachází ve složce \texttt{src/}. Soubory, které jsou součástí kostry, a tudíž nepatří žádné kompilační
+fázi jsou přímo ve složce \texttt{src/} a každá kompilační fáze má vlastní podsložku uvnitř \texttt{src/}. Na rozdíl od některých C++
+projektů se hlavičkové soubory nachází ve stejné složce, jako ostatní soubory s kódem. Soubory s C++ kódem mají přípony \texttt{.cpp} a
+\texttt{.hpp}.
+
+\vspace{1em}
+\noindent Následuje souhrn kompilačních fází se jmény, která mají v kódu, a jejich krátké vysvětlení:
+\begin{itemize}
+ \item Lexer -- Rozsekává vstupní text na slova. (tokeny)
+ \item Preparser -- Parsuje syntax klíčových slov a sestavuje tabulku symbolů.
+ \item Parser -- Řeší pořadí operátorů a vytváří abstraktní syntaktický strom. (AST)
+ \item Code Generator -- Vytváří instrukce LLVM IR na základě AST.
+ \item LLVM Interface -- Zkompiluje vzniklé LLVM IR do spustitelného souboru.
+\end{itemize}
+
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
@@ -135,27 +160,69 @@ Dále mi umělá inteligence pomohla pochopit věci, které jsem se v rámci pro
 \end{tikzpicture}
 \caption{Jednotlivé fáze compileru}
 \end{figure}
-Projekt je rozdělen do modulární struktury, kde jednotlivé části
-kompilátoru jsou implementovány jako nezávislé komponenty.
 \section{Způsob psaní kódu}
-Kód je psán modulárně s důrazem na čitelnost, oddělení odpovědností
-a snadnou rozšiřitelnost.
+Při psaní kódu jsem se snažil být pragmatický. Například jsem nedával příliš velký pozor, zda je všechna alokovaná paměť následně i uvolněna,
+protože celý compiler běží jen velmi krátkou dobu a všechna paměť je stejně na konci programu uvolněna. Také jsem byl velmi konzervativní s
+používáním standardní knihovny templatů pro C++, (STL) protože mám zkušenost, že přílišné používání STL může vést k nečitelným chybám a
+zavádějící logice. Znamenalo to ale, že jsem nevyužil některých užitečných datových struktur, které jazyk C++ nabízí, nebo jsem si je musel
+implementovat sám. Kód také nekontroluje, zda je uživatelský vstup správný, a jediný kód na nahlášení chyb slouží k vystopování, která
+část compileru chybu našla, místo aby dával přehlednou zprávu o tom, co se pokazilo. To mi umožnilo na kódu rychleji pracovat a dovolilo mi
+to dokonce některé fáze kompilace, jako třeba Generátor LLVM kódu několikrát celé přepsat, než jsem byl spokojený s výsledkem.
+
 \section{Kostra}
-Jádro systému obsahuje základní datové struktury a komponenty
-nezbytné pro reprezentaci a zpracování programu.
+Kód, kterému říkám \enquote{Kostra} řídí běh celého compileru. Při jeho návrhu jsem napřed napsal kód hlavního souboru. Snažil jsem se,
+aby kód hlavního souboru byl co nejčitelnější. Rozložil jsem to tak, že většina obtížné práce je schovaná za příjemně vypadající metodou
+\texttt{module.build()}. Na druhou stranu jsem věnoval většinu hlavního souboru uživatelskému rozhraní. Místo nesrozumitelného souboru
+na stovky řádků jsem tedy dostal jednoduchý soubor, pomocí kterého může případný vývojář najít, která část projektu je zodpovědná za jaký
+úkol. Teprve když byl hlavní soubor hotov, jsem implementoval třídy a metody, které jsem si v hlavním souboru vymyslel. Můj přístup
+znamenal, že jsem věděl přesně, co musím implementovat. Neztrácel jsem tedy čas psaním zbytečného kódu.
 \subsection{Hlavní soubor}
-Níže naleznete celý hlavní soubor. Nejdříve importuje tři knihovny.
+Níže naleznete celý hlavní soubor. Importuje tři knihovny. První, \texttt{module.hpp} je má implementace pomocných tříd, které mi dávají
+přehledné rozhraní pro interakci s projektem. Pod tím je množství řádků, které definují argumenty příkazového řádku, zakončené importem
+knihovny \texttt{easyargs.h}. Výhodou \texttt{easyargs.h} je, že díky chytrému využití preprocesoru jazyka C umí měnit svůj obsah a
+může tedy vrátit strukturu typu \texttt{args\_t}, která obsahuje zadanou hodnotu pro každý argument. Poslední knihovnou je \texttt{iostream},
+což je vestavěná knihovna C++ pro výpis do konzole. Pokud nejste seznámeni s programováním v jazyce C++, nebuďte překvapeni syntaxi
+\texttt{std::cout}, je to způsob, jakým se v C++ píše do konzole. Také je nutné podotknout, že knihovna Easyargs je určena pro C, nikoli C++,
+tudíž jsem musel řešit rozdíly mezi oběma jazyky.
+
 \begin{listing}[H]
 \caption{Celý hlavní soubor}
 \inputminted[breaklines]{cpp}{../cppcompiler/src/_main.cpp}
 \end{listing}
+
 \subsection{Třída \texttt{Module} a další pomocné třídy}
-Třída Module reprezentuje jednotku překladu a obsahuje všechny
-globální struktury programu.
+Objekt třídy \texttt{Module} reprezentuje program, který se nachází ve fázích kompilace mezi tokenizací a generací LLVM IR.
+Konstruktor \texttt{Module} žádá pouze soubor s kódem, na kterém jsou nejdříve provedeny první dvě fáze kompilace, v kódu
+přezdívané Lexer a Preparser. \texttt{Module} se skládá ze dvou částí, hlavní tabulky symbolů, kterou konstruktor dostane z Preparseru,
+a balíčku objektů knihovny LLVM, ve kterém se budou ukládat generované LLVM instrukce. Třída \texttt{Module} má jedinou metodu a to
+je \texttt{build}. \texttt{build} se podívá do tabulky symbolů a zkompiluje vše potřebné do LLVM IR. Jako návratovou hodnotu má
+\texttt{build} objekt třídy \texttt{IrFile}. Ta je jednou z několika tříd, které mi usnadňují práci se soubory. Přestože se třída
+jmenuje \texttt{IrFile}, nekoresponduje se souborem na disku. Tyto pomocné třídy totiž reprezentují jen dočasnou hodnotu, dokud není
+zavolána jejich \texttt{commit} metoda, která jim teprve přiřadí trvalé místo na disku.
 \subsection{Symboly a Tabulky symbolů}
-Symbolová tabulka uchovává informace o identifikátorech, jejich typech
-a rozsazích platnosti v programu.
+Základní jednotka kódu se v mém jazyce nazývá Symbol. Jednotlivé symboly v mém compileru reprezentují instance třídy \texttt{Symbol}.
+Symbolům jsou přiřazeny tabulky symbolů a ke každému Symbolu je možné přiřadit pouze jednu tabulku. Tabulka symbolů může také vlastním
+symbolům přiřazovat jména. Toho využívám v implementaci proměnných a funkcí.
+
+Existuje několik tabulek zároveň. Jednotlivé tabulky mají mezi sebou hiearchickou strukturu. Hlavní tabulka popisuje globálně viditelné
+symboly, tedy globální proměnné a funkce, zatímco podřízené tabulky popisuje lokální symboly.
+
+Každý symbol v sobě ukládá reference na struktury reprezentující ten stejný symbol v určité fázi kompilace. Díky této struktuře nemusím
+překládat celý program z jedné reprezentace na jinou naráz, ale můžu zkompilovat jen ty, které potřebuji. Můžu například zkompilovat
+pouze globální funkci \texttt{main} a compiler automaticky určí, které symboly zkompilovat.
 \section{Tokenizace (Lexer)}
+Tokenizace, neboli lexikální analýza probíhá v mém compileru ve fázi, kterou jsem nazval Lexer. Její podstatou je ze vstupního ještě
+nezpracovaného kódu vytvořit seznam elementárních jednotek syntaxu. Syntax mého jazyka se totiž neskládá výhradně ze znaků, nýbrž často
+z celých slov. Je proto užitečné být schopný číst kód slovo po slovu, místo písmeno po písmenu. Takovým \enquote{slovům} se říká tokeny.
+\footnote{Tokeny a slova nejsou ve všech kontextech zaměnitelné. Například při programování LLM se dlouhá slova většinou skládají z několika tokenů.}
+Programovací jazyky často vedle textu do tokenů ukládají další informace. Můj jazyk tohle nedělá, proto (mimo jiné) můj compiler nedokáže
+uživateli říct, na jakém místě v souboru našel syntaktickou chybu, protože ta informace je první věcí, které se zbavil. Samozřejmě
+to v budoucnosti lze změnit, jenom jsem tenhle nedostatek zpozoroval příliš pozdě a před maturitní zkouškou jsem měl větší problémy.
+Lexer byla první část, kterou jsem na projektu dokončil. Od té doby jsem nemusel na Lexeru téměř nic měnit, protože již bohatě stačil
+pro mé potřeby. Podstatou je, že se Lexer snaží seskupovat alfanumerické znaky. Pokud Lexer narazí na whitespace, tak ho vynechá, jenom
+v tom místě nesmí seskupovat znaky. Speciální znaky mají každý svá vlastní pravidla tokenizace. Pokud je uživatel rozumný, neměl by mít Lexerem
+v jazyce potíže.
+
 \begin{figure}[H]
 \centering
 \begin{minipage}{0.4\linewidth}
@@ -210,13 +277,27 @@ putchar & ( & 48 & + & n & \% & 10 & ) & ; \\
 };
 \end{tikzpicture}
 \end{minipage}
-\caption{Character-level vs.\ token-level representation of a program.}
+\caption{Rozdíl kódu před a po tokenizaci}
 \end{figure}
-Lexikální analýza provádí rozdělení vstupního kódu na základní lexémy,
-které slouží jako vstup pro další fáze kompilace.
 \section{První fáze parsování (Preparser)}
-První fáze parsování zajišťuje klasifikaci lexémů a vytvoření
-symbolové tabulky včetně rozpoznání klíčových slov.
+Parsování neboli syntaktická analýza rozděluje program na jednotlivé mezi sebou propojené operace. V této části je nutné poznamenat,
+že není vůbec běžné rozdělovat parsování na dva kroky a Preparser není obecně zavedený pojem. Parsování jsem rozdělil na dva kroky,
+protože je pro moje budoucí plány důležité, abych měl co nejdříve představu o názvech symbolů. Proto jsem vytvořil tuto fázi, která
+sestaví tabulku symbolů hned jako druhý krok. Aby dokázala zjistit věci, jako jsou třeba názvy proměnných je potřeba analyzovat
+syntax klíčových slov. Aby se nemusela opakovat práce, uloží si tato fáze syntax libovolného klíčového slova ve strukturovaném formátu.
+Aby dále usnadnil dalším fázím práci, přidá Preparser nově vytvořeným symbolům značky podle toho jestli se jedná o operátor a případně
+o jaký druh operátoru se jedná. Preparser má 4 známé druhy symbolů: hodnota, prefix operátor, infix operátor, postfix operátor. Prefix
+operátor jsou operátory, které operují jenom na hodnotě za nimi. Příkladem prefix operátoru je negace ($!x$), nebo předpona minus ($-x$).
+Postfix operátory naopak operují na hodnotě před nimi. V programování jsou velmi vzácné. Příkladem by byl post-decrement operátor ($x--$).
+Nejčastějším druhem operátoru jsou infix operátory, které operují na obou sousedních hodnotách. Příkladem je odčítání ($x-y$). Pokud
+se jedná o složitější operátor, jako jsou například závorky, nedokážeme jej pomocí těchto čtyřech druhů samotných popsat. Musíme se
+tedy spolehnout na kód pro řešení klíčových slov, který naopak dokáže popsat téměř jakýkoli syntax. Proto jsou závorky klíčovým slovem.
+Všechny hodnoty musí být odděleny infix operátory. Aby to Preparser zajistil, vloží prázdné infix operátory tam, kde je to potřeba.
+
+Níže vidíte stejný program jako předtím, který však již prošel Preparserem. Není to optimální příklad, protože obsahuje pouze hodnoty a infix operátory.
+Také nevím, jestli do maturity přidám závorky jako postfix operátor pro volání funkce, nebo to bude opravdu vypadat jako na obrázku.
+Nicméně graf dole ukazuje, jak vypadá rozložení paměti v Preparseru. Šipky značí, že Symbol, odkud ta šipka vede, má výraz, na který šipka
+ukazuje, uložený v sobě a má nad ním absolutní kontrolu. Bílé prázdné čtverečky značí prázdný výraz. (0 symbolů)
 
 \begin{figure}[H]
 \centering
@@ -266,11 +347,17 @@ empty/.style={rectangle, draw=black!60, fill=white!5, very thick, minimum size=8
 
 \end{tikzpicture}
 
-\caption{Hierarchical token structure with branching control flow and grouped token arrays.}
+\caption{Program z předchozí části očima Preparseru}
 \end{figure}
+\pagebreak
 \section{Druhá fáze parsování (Parser)}
-Druhá fáze parsování převádí normalizovaný tok tokenů do abstraktního
-syntaktického stromu (AST).
+V této fázi konečně sestavíme AST. Jedná se o strom uzlů, kde každý uzel znázorňuje nějakou operaci. Díky pilné práci předchozí fáze je
+sestavení AST téměř bezbolestné. Bohužel je tu ale jeden problém. Pokud se podíváte na obrázek níže, můžete si všimnout, že nemá stejný
+počet symbolů, jako ten nahoře. Naštěstí jsem si byl toho problému vědom a vyřešil jsem ho. Symboly mají chytrou funkci, díky které se
+mohou spojovat dohromady, jako například u závorek, které v AST nejsou, nebo je také možné nové symboly přidávat. To je sice trochu
+nebezpečnější, protože je teoreticky možné, že dřívější fáze si zažádá symbol vytvořený budoucí fází a ten symbol bude mít jen reprezentaci
+z té pozdější fáze, ale zatím v mém limitovaném testování tato situace nenastala, takže je logické usoudit, že u správně napsaného klíčového
+slova to nebude problém.
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
@@ -326,11 +413,10 @@ node/.style={circle, draw=black!60, fill=white!5, very thick, minimum size=4mm},
 \draw[->, very thick] (m4-1-2) -- (m6-1-2);
 \end{tikzpicture}
 
-\caption{Hierarchical token structure with branching control flow and grouped token arrays.}
+\caption{AST pro stejný program, jako předtím}
 \end{figure}
+\pagebreak
 \section{Generace LLVM IR (Code Generator)}
-Generace LLVM IR převádí AST do mezikódu LLVM, který je následně
-použit pro finální kompilaci.
 \begin{listing}[H]
 \begin{minted}{LLVM}
 define i64 @num(i64 %0) {
@@ -357,32 +443,98 @@ define i64 @num(i64 %0) {
 \end{minted}
 \caption{Funkce num(n) zkompilovaná do LLVM IR}
 \end{listing}
+Na rozdíl od parsování nemám pro Generaci LLVM obrázek, který by vše podrobně vysvětlil. Na rozdíl od předchozích fází, kde jsem si mohl vše
+volně rozhodovat sám, se zde totiž mísí moje názory o strukturování kódu s názory LLVM. Proto byla tato fáze ze všech nejkritičtější a musel
+jsem ji třikrát přepsat. Dosud totiž mířily všechny šipky pouze jedním směrem, tudíž symboly vůbec neměly ponětí o tom, na jaké větvi se nachází.
+Pro generaci instrukcí však symbol nepotřebuje znát pouze, na jakých hodnotách operuje, ale i do jaké funkce má svou instrukci napsat, takže musí
+být schopný se podívat oběma směry. Proto jsem rozdělil tuto fázi na dva kroky.
+
+V prvním kroku procházíme graf a každému navštívenému symbolu řekneme, odkud jsme k němu došli. V prvním kroku zároveň vytváříme proměnné
+a funkce. Teprve, když už každý symbol ví, co je v obou směrech, mohou symboly doputovat tím řetězem k funkci, ve které se nacházejí a přidat
+do ní patřičnou instrukci.
+
+Kromě toho komplikovaného procesu si schopný programátor v kódu výše něčeho všimne. Program nahoře je totiž velmi špatně napsaný. Hned jako první
+se v něm porovnávají dvě čísla za vzniku logické hodnoty, která je pak zkonvertovaná na číslo, a pak zase na logickou hodnotu. Dále funkce skáče
+na blok kódu \texttt{\%8}, a pak z něj ihned skočí na blok kódu \texttt{\%9}. Pokud se podíváte na instrukci \texttt{phi}, je očividné, že jde
+zjednodušit pouze na \texttt{0}, a že její vypočtená hodnota není nikdy použita.
+
+Jak tedy vidíte můj compiler zatím při generaci LLVM IR nedělá vůbec žádnou optimalizaci. On vlastně nedělá optimalizaci nikde. To je v souladu
+s mými cíli, protože by implementovat pořádné optimalizace ubíralo času od implementace mnohem důležitějších věcí.
+
 \section{Rozhraní pro LLVM (LLVM Interface)}
-Tato vrstva abstrahuje LLVM API a poskytuje jednodušší rozhraní
-pro generování IR kódu.
+Tohle je poslední fáze. Zajímavá je v tom, že jako jediná probíhá zcela mimo pomocnou třídu \texttt{Module}. Je také, alespoň dle mého názoru,
+nejméně zajímavá. Jediné, co dělá, je že volá knihovnu LLVM, aby zkompilovala daný LLVM IR kód do Assembly, nebo objektového kódu. Případně
+pak zavolá linker, (já si vybral LLD) který pak ze souboru s objektovým kódem udělá spustitelný soubor. Má asi největší poměr platformově závislého
+kódu v celém projektu, protože jsem měl tady s Windows největší potíže. Kromě toho nemá smysl zacházet tady do větších detailů, protože jsem
+velkou část zkopíroval z tutoriálu na stránkách LLVM: \href{https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html}{https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html}
+
 \section{Problémy s Windows}
-Podpora Windows byla komplikována rozdíly v toolchainu a odlišnostmi
-oproti Linuxovému vývojovému prostředí.
+Co jsem u projektu nečekal, bylo, jak příšerně je Windows k programování compilerů navržen. Jelikož nemám trvalý přístup k hardwaru, na kterém
+běží Windows, musel jsem většinu portování dělat na svém často zamrzajícím VM, což upřímně trochu zkazilo mojí naladu z projektu a ubralo mi
+cenný čas. Problémy, které však budu popisovat jsou univerzální všem Windows počítačům. I kdyby byl Windows má primární platforma, jediné,
+co by to znamenalo by bylo, že bych měl méně času, protože bych se musel věnovat spravování Windows-specifických problémů déle.
+
 \subsection{První pokus -- Visual Studio}
-První pokus o vývoj na Windows byl proveden ve Visual Studiu,
-které však nebylo vhodné pro LLVM-based workflow.
+Ze začátku jsem se pokoušel zprovoznit kompilaci přes Visual Studio, kanonický nástroj pro vytváření Windows native aplikací. Prvním problémem
+bylo, že nemohu prostě vložit svůj Makefile do Visual Studia a očekávat, že to bude fungovat. Visual Studio podporuje tři build systémy pro C++:
+MSBuild, CMake a NMake. MSbuild jsem ihned zamítl, protože funguje na základě složitě navigovatelných menu, takže to bylo mezi CMake a NMake.
+S CMake mám předchozí zkušenost, tedy hlavně negativní předchozí zkušenost, zatímco NMake je port Makefile pro Windows. Bohužel ale Makefile
+a NMake jsou dostatečně odlišné, že bych stejně musel mít soubory na kompilaci dva. Protože jsem neměl náladu ani energii, rozhodl jsem se
+pro CMake. Myslel jsem si, že umělá inteligence, která je trénovaná na mnohem populárnějším CMake mi dá, alespoň v prvních pár pokusech, alespoň
+částečně funkční build skript. Ukázalo se ale, že Visual Studio nemá žádný bezbolestný způsob, jak si stáhnout knihovnu LLVM, takže jsem si
+ji musel stáhnout manuálně, nebo si ji dokonce zkompilovat sám. Nemyslím si, že projekt rozměru mého má právo žádat po uživateli zkompilovat
+knihovnu velikosti LLVM, takže jsem si začal stahovat LLVM, když jsem dostal nápad, čímž tento pokus oficiálně skončil.
+
 \subsection{Druhý pokus -- Terminál}
-Druhý přístup využíval terminálové prostředí, které poskytlo lepší
-kontrolu nad build procesem.
+Můj nápad byl jednoduchý: \enquote{Jestli si stejně musím stahovat celé LLVM, co mi tady poskytuje Visual Studio?} Uvědomil jsem si totiž,
+že mimo jiné distribuce LLVM obsahuje Clang, compiler pro C a C++. Jestliže mám tedy svůj kód a C++ compiler, nic mi nebrání prostě Visual Studio
+přeskočit a rovnou spouštět compiler pomocí terminálu. Co mi poskytuje build systém, který mě stejně odpuzuje, když kompilační script můžu napsat
+v jakémkoli skriptovacím jazyce schopném spouštět příkazy přes příkazový řádek. Takže jsem nechal ChatGPT mi vygenerovat BATCH script, který
+prostě spustí všechny potřebné kompilační příkazy. Tohle fungovalo.
+
+Důraz zde dávám na minulý čas. Chtěl jsem přinést ukázat svůj projekt na školním počítači. Když jsme však přišli do učebny, zhrozili jsme se.
+Školní administrace totiž v ten stejný týden (možná dokonce ten předchozí den) aktualizovala počítače v učebně na Windows 11. Když jsme se
+přihlásili ukázalo se, že upgrade nevyšel úplně hladce; počítače každých několik minut ukázaly modrou obrazovku. To však nebyl můj největší
+problém. Ten byl v tom, že upgrade odinstaloval Visual Studio.
+
+Proč mi vadilo, že nemám Visual Studio, když jsem ho neplánoval použít? Protože Visual Studio, jako kononický nástroj pro vytváření Windows
+native aplikací není pouze editorem. Je to správce celé řady softwaru, který je potřeba při vývoji softwaru. Pokud bylo Visual Studio pryč
+byly pryč i vývojářské nástroje jazyka C++. Pro zkompilování C++ nestačí, jak jsem si myslel, C++ kód a C++ compiler, ale je potřeba i
+C++ standardní knihovny, kterou jsem kvůli absenci Visual Studia neměl a k instalaci Visual Studia je třeba administrátorského přístupu.
+Radši, než vysvětlovat, že potřebuji Visual Studio nainstalované přestože ho neplánuji používat, jsem se rozhodl najít alternativní metodu.
+
 \subsection{Třetí pokus -- MinGW}
-MinGW bylo použito jako alternativní toolchain pro kompatibilitu
-s Linuxovým build systémem.
+Navenek vypadá MinGW jako nástroj, který jsem měl použít rovnou. Poskytuje na Windows prostředí unixového příkazového řádku, což by mi
+umožnilo kompilovat Linux i Windows verze jedním Makefile. Navíc k instalaci nepotřebuje administrátorská práva. Má však i nevýhody.
+Hlavní nevýhodou z mého hlediska je, že výsledný soubor je závislý na kódu uvnitř MinGW, (zvláště pokud je to zkompilované s MSYS2 runtime)
+takže jediný způsob, jak ten projekt spustit mimo prostředí MinGW je najít všechny .dll soubory, na kterých zkompilovaný soubor závisí a
+přesunout je do stejné složky, což není něco, co by měl člověk dělat. Doufám tedy, že pokud jste to dočetli až sem, tak mi prominete, že
+můj projekt pravděpodobně MinGW na Windows neopustí.
+
 \subsection{Změny v kódu}
-Pro zajištění kompatibility mezi platformami byly provedeny úpravy
-v build systému a části kódu závislé na OS.
+V některých částech kódu, hlavně v Code Generatoru a LLVM interface, se vyskytuje kód, který by na Windows nefungoval. Používám proto
+C preprocesoru, abych mohl poskytnout oběma platformám funkční implementaci. Jeden problém, který se mi vyskytl pouze na Windows je,
+že C++ knihovna, která mi poskytovala rozhraní mezi mým compilerem a LLD, byla rozbitá a nefungovala, takže jsem specificky pro Windows
+udělal alternativní implementaci, která prostě volá LLD přes příkazový řádek.
+
+Větším problémem je, že Linux a Windows používají pro komunikaci s operačním systémem velmi odlišné rozhraní. Kvůli tomu jsem musel udělat
+statickou knihovnu, která dělá jednu věc: importuje 3 Windows API funkce. Program přeložený do objektového kódu pak s knihovnou zkombinuji
+pomocí linkeru. Na linuxu mi stačila \texttt{syscall} instrukce v Assembly.
+
 \subsection{Nedostatky Windows verze}
-Windows verze má omezení v oblasti kompatibility toolchainu a
-debuggingu oproti Linuxové verzi.
+Kromě závislosti na MinGW je momentálně největší problém v zobrazování Unicode znaků na obrazovce. Problém to je v C/C++ na Windows dlouhodobý.
+Windows očekává, že výstup obsahující Unicode znaky mu bude předán v UTF-16, zatímco Linux přijímá UTF-8 bez problémů. Easyargs je cíleno na unixové
+prostředí, takže kód očekává 8-bitové znaky, jako v UTF-8. Když se Easyargs snaží předat Windowsu text v UTF-8, Windows odmítne rozpoznat Unicode
+znaky a napíše místo toho několik náhodně vypadajících znaků.
+
 \chapter{Uživatelská dokumentace}
 \section{Instalace a spuštění}
-Předpokladem k používání jazyka je mít projekt nainstalovaný.
+Následuje vysvětlení postupu kompilace pro Windows přes MinGW. Aktuálně není na GitHubu projekt ve zkompilované verzi, proto je nutné si jej
+zkompilovat sám.
+
 \subsection{Kompilace na Linuxu}
 Následuje vysvětlení postupu kompilace pro Linux. Aktuálně není na GitHubu projekt ve zkompilované verzi, proto je nutné si jej zkompilovat sám.
+
 \paragraph{Předpoklady:}
 \begin{itemize}
  \item Git (pouze ke stažení projektu z GitHubu)
@@ -422,18 +574,224 @@ Pro vypsání tabulky argumentů \texttt{lang} existuje:
 \end{verbatim}
 Pokud chcete, aby byl příkaz \texttt{lang} přístupný všude, můžete poté soubor přesunout do složky \texttt{/usr/bin/}, nebo jiné složky v
 proměnné prostředí \texttt{PATH}, nebo složku s compilerem do \texttt{PATH} přidat.
+
 \subsection{Kompilace na Windows}
+Kompilace na Windows je téměř úplně stejná, jak na Linuxu. Stačí pouze nahradit Linux příkazový řádek příkazovým řádkem MinGW.
+Důležité je mít všechen předpokládaný software stažený uvnitř prostředí MinGW.
+
 \section{Uživatelské rozhraní}
+Uživatel s projektem interaguje pomocí příkazového řádku. Jako první argument uvádí vždy uživatel soubor, který bude zkompilován.
+Dále může uživatel specifikovat název vzniklého souboru pomocí možnosti \texttt{-o <název souboru>}. \texttt{-a} způsobí, že
+místo spustitelného souboru uživatel dostane instrukce procesoru ve formátu Assembly. \texttt{-d} vypíše do konzole mnoho nezajímavého
+textu, který slouží hlavně pro debugování compileru, nikoli uživatelských programů.
+\begin{figure}[H]
+\begin{verbatim}
+USAGE:
+    ./lang <vstup> [OPTIONS]
+
+ARGUMENTS:
+    <vstup>         Soubor ke kompilaci
+
+OPTIONS:
+    -o <výstup>    Název zkompilovaného souboru (default: program)
+    -a              Assembly výstup
+    -d              Debug výstup
+    -h              Seznam argumentů
+\end{verbatim}
+\caption{Nápověda, kterou uživatelské rozhraní poskytuje}
+\end{figure}
+
 \section{Funkce}
+Každý program začíná ve funkci \texttt{main()}. Návratová hodnota \texttt{main()} koresponduje s kódem ukončení programu.
+Tohle je nejjednodušší možný program, hned se ukončí s kódem 0.
+\begin{verbatim}
+fn main() : 0;
+\end{verbatim}
+Pro tisknutí na obrazovku stačí zadat funkci \texttt{putchar} ASCII hodnotu požadovaného znaku. Následující program tedy vytiskne na obrazovku \enquote{A}:
+\vspace{1em} \\
+\begin{center}
+\begin{minipage}{0.4\linewidth}
+\begin{verbatim}
+fn main() {
+  putchar 65;
+  putchar 10;
+  0
+};
+\end{verbatim}
+\end{minipage}
+\begin{minipage}{0.5\linewidth}
+Každý znak má v této tabulce určitou hodnotu, \texttt{putchar} na základě toho ten určitý znak vypíše.
+\end{minipage}
+\end{center}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|*{8}{>{\centering\arraybackslash}X|}}
+\hline
+Číslo & Znak & Číslo & Znak & Číslo & Znak & Číslo & Znak \\ \hline
+0  & NUL & 32 & SPACE & 64  & @ & 96  & ` \\ \hline
+1  & SOH & 33 & !     & 65  & A & 97  & a \\ \hline
+2  & STX & 34 & "     & 66  & B & 98  & b \\ \hline
+3  & ETX & 35 & \#    & 67  & C & 99  & c \\ \hline
+4  & EOT & 36 & \$    & 68  & D & 100 & d \\ \hline
+5  & ENQ & 37 & \%    & 69  & E & 101 & e \\ \hline
+6  & ACK & 38 & \&    & 70  & F & 102 & f \\ \hline
+7  & BEL & 39 & '     & 71  & G & 103 & g \\ \hline
+8  & BS  & 40 & (     & 72  & H & 104 & h \\ \hline
+9  & TAB & 41 & )     & 73  & I & 105 & i \\ \hline
+10 & LF  & 42 & *     & 74  & J & 106 & j \\ \hline
+11 & VT  & 43 & +     & 75  & K & 107 & k \\ \hline
+12 & FF  & 44 & ,     & 76  & L & 108 & l \\ \hline
+13 & CR  & 45 & -     & 77  & M & 109 & m \\ \hline
+14 & SO  & 46 & .     & 78  & N & 110 & n \\ \hline
+15 & SI  & 47 & /     & 79  & O & 111 & o \\ \hline
+16 & DLE & 48 & 0     & 80  & P & 112 & p \\ \hline
+17 & DC1 & 49 & 1     & 81  & Q & 113 & q \\ \hline
+18 & DC2 & 50 & 2     & 82  & R & 114 & r \\ \hline
+19 & DC3 & 51 & 3     & 83  & S & 115 & s \\ \hline
+20 & DC4 & 52 & 4     & 84  & T & 116 & t \\ \hline
+21 & NAK & 53 & 5     & 85  & U & 117 & u \\ \hline
+22 & SYN & 54 & 6     & 86  & V & 118 & v \\ \hline
+23 & ETB & 55 & 7     & 87  & W & 119 & w \\ \hline
+24 & CAN & 56 & 8     & 88  & X & 120 & x \\ \hline
+25 & EM  & 57 & 9     & 89  & Y & 121 & y \\ \hline
+26 & SUB & 58 & :     & 90  & Z & 122 & z \\ \hline
+27 & ESC & 59 & ;     & 91  & [ & 123 & \{ \\ \hline
+28 & FS  & 60 & <     & 92  & \textbackslash & 124 & | \\ \hline
+29 & GS  & 61 & =     & 93  & ] & 125 & \} \\ \hline
+30 & RS  & 62 & >     & 94  & \^{} & 126 & \~{} \\ \hline
+31 & US  & 63 & ?     & 95  & \_ & 127 & DEL \\ \hline
+\end{tabularx}
+\caption{ASCII}
+\end{table}
+\begin{center}
+\begin{minipage}{0.4\linewidth}
+\begin{verbatim}
+fn num(n) : {
+    if (n >= 10) {
+        num(n / 10);
+    };
+    putchar(48+n%10);
+};
+\end{verbatim}
+\end{minipage}
+\begin{minipage}{0.5\linewidth}
+Funkce mohou mít parametr a být rekurzivní.
+\end{minipage}
+\end{center}
 \section{Operátory}
-\section{Klíčové slovo \texttt{if}}
-\section{Klíčové slovo \texttt{while}}
-\section{proměnné}
+Jazyk podporuje jednoduché aritmetické operátory, ($+,\ -,\ *,\ /,\ \%$) porovnávací operátory, ($==,\ !=,\ >=,\ >,\ <=,\ <$) a přiřazovací operátor. ($=$)
+\section{Klíčová slova \texttt{if} a \texttt{while}}
+Klíčová slova \texttt{if} i \texttt{while} se chovají, jak by člověk očekával. Možná někoho zarazí, že if vrací hodnotu na základě toho, jestli byla podmínka
+pravdivá.
+\section{Proměnné}
+\begin{center}
+\begin{minipage}{0.4\linewidth}
+\begin{verbatim}
+let global = 66;
+fn main() {
+  let local = 9;
+  global = global - 1;
+  local = local + 1;
+  putchar global;
+  putchar local;
+};
+\end{verbatim}
+\end{minipage}
+\begin{minipage}{0.5\linewidth}
+Existují lokální i globální proměnné. Jejich hodnoty se mohou měnit.
+\end{minipage}
+\end{center}
+\section{Ukázkové programy}
+\begin{center}
+\begin{minipage}{0.45\linewidth}
+\textbf{FizzBuzz}
+\begin{verbatim}
+ fn fizz(f) : {
+	if (f % 3 == 0) {
+		putchar (102);
+		putchar (105);
+		putchar (122);
+		putchar (122);
+	} else 0;
+};
+fn buzz(b) : {
+	if (b % 5 == 0) {
+		putchar (98);
+		putchar (117);
+		putchar (122);
+		putchar (122);
+	} else 0;
+};
+fn number(num) : {
+	if (num >= 10) {
+		number (num / 10);
+	} else 0;
+	putchar (48 + num % 10);
+};
+fn fizzbuzz1(n1) : {
+	if (n1 % 3 != 0) {
+		fizzbuzz2 (n1);
+	} else 0;
+};
+fn fizzbuzz2(n2) : {
+	if (n2 % 5 != 0) {
+		number (n2);
+	} else 0;
+};
+fn main() : {
+	let i = 1;
+	while (i < 100) {
+		fizz (i);
+		buzz (i);
+		fizzbuzz1 (i);
+		putchar (10);
+		i = i + 1;
+	};
+};
+\end{verbatim}
+\end{minipage}
+\begin{minipage}{0.45\linewidth}
+\textbf{Fibonacciho posloupnost}
+\begin{verbatim}
+fn print1() : {
+    putchar 32;
+    putchar 49;
+    putchar 10;
+};
+
+fn number(num) : {
+    if (num >= 10) {
+        number (num / 10);
+    } else 0;
+    putchar (48 + num % 10);
+};
+
+let a1 = 1;
+let a2 = 1;
+
+fn main() : {
+    let i = 0;
+    print1();
+    print1();
+    while (i < 50) {
+        let a3 = a1 + a2;
+        putchar 32;
+        number a3;
+        putchar 10;
+        a1 = a2;
+        a2 = a3;
+        i = i + 1;
+    };
+};
+\end{verbatim}
+\end{minipage}
+\end{center}
+
 \chapter{Závěr}
 Téměř celý projekt se mi podařilo dokončit jen s minimálními problémy. Projekt funguje a věřím, že budu schopný na jazyku dále pracovat.
 Největší problém celého projektu, který jsem ještě nevyřešil, je vymyslet jazyku jméno. Při práci na jazyku jsem zvážil mnoho jmen, žádné
 však nesplňovalo mé představy. Druhou největší překážkou, ve které jsem byl trochu úspěšnější, bylo sepsání dokumentace.
 
-Jsem poněkud zklamán, že mi čas nedovolil implementovat některé mé vedlejší cíle, ale zato jsem rád, že jsem nebyl s vyjímkou dokumentace v mém
+Jsem poněkud zklamán, že mi čas nedovolil implementovat některé mé vedlejší cíle, ale zato jsem rád, že jsem nebyl s výjimkou dokumentace v mém
 časovém plánu příliš optimistický. Co můj projekt dále čeká je přidání skutečného typového systému, který zásadně rozšíří schopnosti mého jazyka.
 \end{document}
