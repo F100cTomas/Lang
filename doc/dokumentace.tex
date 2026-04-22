@@ -20,7 +20,7 @@
 }
 \title{Compiler vlastního programovacího jazyka}
 \author{Ondřej Suk}
-\date{\today}
+\date{2026}
 
 \begin{document}
 
@@ -73,7 +73,7 @@ LLD je linker, který je součástí projektu LLVM. Linker zpracovává soubory 
 Knihovnu Easyargs jsem použil hlavně, protože poskytuje nenáročné rozhraní pro definování argumentů příkazového řádku. Uživatelské rozhraní nepovažuji
 za důležitou část projektu, tudíž jsem vybral jednoduchou knihovnu.
 \paragraph{\href{https://www.gnu.org/software/make/manual/make.html}{Makefile}}
-Makefile je systém, pomocí kterého jsem vytvořil kompilační script pro tento projekt. Vybral jsem si ho, protože na rozdíl od jiných C++ build systémů
+Makefile je systém, pomocí kterého jsem vytvořil kompilační skript pro tento projekt. Vybral jsem si ho, protože na rozdíl od jiných C++ build systémů
 umožňuje Makefile specifikovat přesně ty příkazy, které budou při kompilaci projektu použity.
 \paragraph{\href{https://www.mingw-w64.org/}{MinGW}}
 MinGW je port nástrojů příkazového řádku Linuxu pro Windows. Podrobnosti, jak jsem MinGW použil jsou v pozdější části dokumentace.
@@ -84,7 +84,7 @@ Clang Format je nástroj, díky kterému zajišťuje, že všechen kód v projek
 \paragraph{\href{https://clang.llvm.org/extra/clang-tidy/}{Clang Tidy}}
 Clang Tidy je nástroj, který pomáhá s hledáním chyb v kódu ještě před tím, než je vůbec zkompilován.
 \paragraph{\href{https://git-scm.com/}{Git}}
-Pro zálohování změn v projektu jsem využil Git a projekt je veřejně viditelný přes \href{https://github.com/F100cTomas/Lang}{repozitář na GitHubu}.
+Pro zálohování změn v projektu jsem využil Git a projekt je veřejně viditelný přes repozitář na GitHubu: \href{https://github.com/F100cTomas/Lang}{https://github.com/F100cTomas/Lang}.
 \paragraph{\href{https://www.latex-project.org/}{\LaTeX}}
 \LaTeX je můj primární nástroj pro psaní dokumentace.
 \subsection{Pro vývoj na Linuxu}
@@ -204,8 +204,8 @@ Základní jednotka kódu se v mém jazyce nazývá Symbol. Jednotlivé symboly 
 Symbolům jsou přiřazeny tabulky symbolů a ke každému Symbolu je možné přiřadit pouze jednu tabulku. Tabulka symbolů může také vlastním
 symbolům přiřazovat jména. Toho využívám v implementaci proměnných a funkcí.
 
-Existuje několik tabulek zároveň. Jednotlivé tabulky mají mezi sebou hiearchickou strukturu. Hlavní tabulka popisuje globálně viditelné
-symboly, tedy globální proměnné a funkce, zatímco podřízené tabulky popisuje lokální symboly.
+Existuje několik tabulek zároveň. Jednotlivé tabulky mají mezi sebou hierarchickou strukturu. Hlavní tabulka popisuje globálně viditelné
+symboly, tedy globální proměnné a funkce, zatímco podřízené tabulky popisují lokální symboly.
 
 Každý symbol v sobě ukládá reference na struktury reprezentující ten stejný symbol v určité fázi kompilace. Díky této struktuře nemusím
 překládat celý program z jedné reprezentace na jinou naráz, ale můžu zkompilovat jen ty, které potřebuji. Můžu například zkompilovat
@@ -290,7 +290,7 @@ o jaký druh operátoru se jedná. Preparser má 4 známé druhy symbolů: hodno
 operátor jsou operátory, které operují jenom na hodnotě za nimi. Příkladem prefix operátoru je negace ($!x$), nebo předpona minus ($-x$).
 Postfix operátory naopak operují na hodnotě před nimi. V programování jsou velmi vzácné. Příkladem by byl post-decrement operátor ($x--$).
 Nejčastějším druhem operátoru jsou infix operátory, které operují na obou sousedních hodnotách. Příkladem je odčítání ($x-y$). Pokud
-se jedná o složitější operátor, jako jsou například závorky, nedokážeme jej pomocí těchto čtyřech druhů samotných popsat. Musíme se
+se jedná o složitější operátor, jako jsou například závorky, nedokážeme jej pomocí těchto čtyř druhů samotných popsat. Musíme se
 tedy spolehnout na kód pro řešení klíčových slov, který naopak dokáže popsat téměř jakýkoli syntax. Proto jsou závorky klíčovým slovem.
 Všechny hodnoty musí být odděleny infix operátory. Aby to Preparser zajistil, vloží prázdné infix operátory tam, kde je to potřeba.
 
@@ -464,32 +464,31 @@ s mými cíli, protože by implementovat pořádné optimalizace ubíralo času 
 \section{Rozhraní pro LLVM (LLVM Interface)}
 Tohle je poslední fáze. Zajímavá je v tom, že jako jediná probíhá zcela mimo pomocnou třídu \texttt{Module}. Je také, alespoň dle mého názoru,
 nejméně zajímavá. Jediné, co dělá, je že volá knihovnu LLVM, aby zkompilovala daný LLVM IR kód do Assembly, nebo objektového kódu. Případně
-pak zavolá linker, (já si vybral LLD) který pak ze souboru s objektovým kódem udělá spustitelný soubor. Má asi největší poměr platformově závislého
-kódu v celém projektu, protože jsem měl tady s Windows největší potíže. Kromě toho nemá smysl zacházet tady do větších detailů, protože jsem
-velkou část zkopíroval z tutoriálu na stránkách LLVM: \href{https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html}{https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html}
+pak zavolá linker, (já si vybral LLD) který pak ze souboru s objektovým kódem udělá spustitelný soubor. Kromě toho nemá smysl zacházet tady do větších detailů, protože jsem velkou část zkopíroval z tutoriálu na stránkách LLVM, takže pokud vás nejen tato část projektu zaujala, zkuste si to přečíst:
+\href{https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html}{https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html}
 
 \section{Problémy s Windows}
-Co jsem u projektu nečekal, bylo, jak příšerně je Windows k programování compilerů navržen. Jelikož nemám trvalý přístup k hardwaru, na kterém
-běží Windows, musel jsem většinu portování dělat na svém často zamrzajícím VM, což upřímně trochu zkazilo mojí naladu z projektu a ubralo mi
-cenný čas. Problémy, které však budu popisovat jsou univerzální všem Windows počítačům. I kdyby byl Windows má primární platforma, jediné,
-co by to znamenalo by bylo, že bych měl méně času, protože bych se musel věnovat spravování Windows-specifických problémů déle.
+Následující část obsahuje primárně mé subjektivní názory a mou osobní zkušenost. Není nijak důležitá k pochopení vnitřní struktury mého
+programovacího jazyka. Důležité je říct, že moje negativní zkušenost s Windows nebyla způsobená mým primárním zaměřením na Linux,
+i když skutečnost, že nemám neomezený přístup k počítači s Windows, která mě přinutila používat zamrzávající VM, situaci nepomohla.
+Následuje převyprávění několikaměsíční snahy zkompilovat můj projekt na školním počítači.
 
 \subsection{První pokus -- Visual Studio}
 Ze začátku jsem se pokoušel zprovoznit kompilaci přes Visual Studio, kanonický nástroj pro vytváření Windows native aplikací. Prvním problémem
 bylo, že nemohu prostě vložit svůj Makefile do Visual Studia a očekávat, že to bude fungovat. Visual Studio podporuje tři build systémy pro C++:
-MSBuild, CMake a NMake. MSbuild jsem ihned zamítl, protože funguje na základě složitě navigovatelných menu, takže to bylo mezi CMake a NMake.
-S CMake mám předchozí zkušenost, tedy hlavně negativní předchozí zkušenost, zatímco NMake je port Makefile pro Windows. Bohužel ale Makefile
-a NMake jsou dostatečně odlišné, že bych stejně musel mít soubory na kompilaci dva. Protože jsem neměl náladu ani energii, rozhodl jsem se
-pro CMake. Myslel jsem si, že umělá inteligence, která je trénovaná na mnohem populárnějším CMake mi dá, alespoň v prvních pár pokusech, alespoň
-částečně funkční build skript. Ukázalo se ale, že Visual Studio nemá žádný bezbolestný způsob, jak si stáhnout knihovnu LLVM, takže jsem si
-ji musel stáhnout manuálně, nebo si ji dokonce zkompilovat sám. Nemyslím si, že projekt rozměru mého má právo žádat po uživateli zkompilovat
-knihovnu velikosti LLVM, takže jsem si začal stahovat LLVM, když jsem dostal nápad, čímž tento pokus oficiálně skončil.
+MSBuild, CMake a NMake. Jeden z nich jsem si musel vybrat. MSbuild jsem ihned zamítl, protože funguje na základě složitě navigovatelných menu,
+takže to bylo mezi CMake a NMake. S CMake mám předchozí zkušenost, tedy hlavně negativní předchozí zkušenost, zatímco NMake je port Makefile
+pro Windows. Bohužel ale Makefile a NMake jsou dostatečně odlišné, že bych stejně musel mít soubory na kompilaci dva. Protože jsem neměl náladu
+ani energii, rozhodl jsem se pro CMake. Myslel jsem si, že umělá inteligence, která je trénovaná na mnohem populárnějším CMake mi dá, alespoň
+v prvních pár pokusech, alespoň částečně funkční build skript. Ukázalo se ale, že Visual Studio nemá žádný bezbolestný způsob, jak si stáhnout
+knihovnu LLVM, takže jsem si ji musel stáhnout manuálně, nebo si ji dokonce zkompilovat sám. Nemyslím si, že projekt rozměru mého má právo žádat
+o uživateli zkompilovat knihovnu velikosti LLVM, takže jsem si začal stahovat LLVM, když jsem dostal nápad, čímž tento pokus oficiálně skončil.
 
 \subsection{Druhý pokus -- Terminál}
-Můj nápad byl jednoduchý: \enquote{Jestli si stejně musím stahovat celé LLVM, co mi tady poskytuje Visual Studio?} Uvědomil jsem si totiž,
+Můj nápad byl jednoduchý: \enquote{Jestli si stejně musím stahovat celé LLVM, co mi tedy poskytuje Visual Studio?} Uvědomil jsem si totiž,
 že mimo jiné distribuce LLVM obsahuje Clang, compiler pro C a C++. Jestliže mám tedy svůj kód a C++ compiler, nic mi nebrání prostě Visual Studio
-přeskočit a rovnou spouštět compiler pomocí terminálu. Co mi poskytuje build systém, který mě stejně odpuzuje, když kompilační script můžu napsat
-v jakémkoli skriptovacím jazyce schopném spouštět příkazy přes příkazový řádek. Takže jsem nechal ChatGPT mi vygenerovat BATCH script, který
+přeskočit a rovnou spouštět compiler pomocí terminálu. Co mi poskytuje build systém, který mě stejně odpuzuje, když kompilační skript můžu napsat
+v jakémkoli skriptovacím jazyce schopném spouštět příkazy přes příkazový řádek. Takže jsem nechal ChatGPT mi vygenerovat BATCH skript, který
 prostě spustí všechny potřebné kompilační příkazy. Tohle fungovalo.
 
 Důraz zde dávám na minulý čas. Chtěl jsem přinést ukázat svůj projekt na školním počítači. Když jsme však přišli do učebny, zhrozili jsme se.
@@ -498,7 +497,7 @@ přihlásili ukázalo se, že upgrade nevyšel úplně hladce; počítače každ
 problém. Ten byl v tom, že upgrade odinstaloval Visual Studio.
 
 Proč mi vadilo, že nemám Visual Studio, když jsem ho neplánoval použít? Protože Visual Studio, jako kononický nástroj pro vytváření Windows
-native aplikací není pouze editorem. Je to správce celé řady softwaru, který je potřeba při vývoji softwaru. Pokud bylo Visual Studio pryč
+native aplikací není pouze editorem. Je to správce celé řady nástrojů, které jsou potřeba při vývoji softwaru. Pokud bylo Visual Studio pryč,
 byly pryč i vývojářské nástroje jazyka C++. Pro zkompilování C++ nestačí, jak jsem si myslel, C++ kód a C++ compiler, ale je potřeba i
 C++ standardní knihovny, kterou jsem kvůli absenci Visual Studia neměl a k instalaci Visual Studia je třeba administrátorského přístupu.
 Radši, než vysvětlovat, že potřebuji Visual Studio nainstalované přestože ho neplánuji používat, jsem se rozhodl najít alternativní metodu.
@@ -678,12 +677,17 @@ fn num(n) : {
 Funkce mohou mít parametr a být rekurzivní.
 \end{minipage}
 \end{center}
+\vspace{1em}
 \section{Operátory}
+\vspace{1em}
 Jazyk podporuje jednoduché aritmetické operátory, ($+,\ -,\ *,\ /,\ \%$) porovnávací operátory, ($==,\ !=,\ >=,\ >,\ <=,\ <$) a přiřazovací operátor. ($=$)
 \section{Klíčová slova \texttt{if} a \texttt{while}}
+\vspace{1em}
 Klíčová slova \texttt{if} i \texttt{while} se chovají, jak by člověk očekával. Možná někoho zarazí, že if vrací hodnotu na základě toho, jestli byla podmínka
 pravdivá.
+\vspace{1em}
 \section{Proměnné}
+\vspace{1em}
 \begin{center}
 \begin{minipage}{0.4\linewidth}
 \begin{verbatim}
@@ -788,10 +792,13 @@ fn main() : {
 \end{center}
 
 \chapter{Závěr}
-Téměř celý projekt se mi podařilo dokončit jen s minimálními problémy. Projekt funguje a věřím, že budu schopný na jazyku dále pracovat.
-Největší problém celého projektu, který jsem ještě nevyřešil, je vymyslet jazyku jméno. Při práci na jazyku jsem zvážil mnoho jmen, žádné
-však nesplňovalo mé představy. Druhou největší překážkou, ve které jsem byl trochu úspěšnější, bylo sepsání dokumentace.
+S výsledkem svého projektu jsem spokojen. Všech hlavních cílů se mi podařilo včas dosáhnout. Naopak s vedlejšími cíly jsem byl příliš ambiciózní, což jsem i
+čekal, protože jsem si spíše dal při výběru vedlejších cílů prostor, abych mohl projekt rozvíjet různými směry. Upřímně jsem trochu doufal, že stihnu i typový
+systém, protože typové systémy jsou velmi důležitou součástí jazyků, ale bohužel tomu tak nebylo. Proto bude typový systém mou hlavní prioritou při budoucí
+práci na projektu.
 
-Jsem poněkud zklamán, že mi čas nedovolil implementovat některé mé vedlejší cíle, ale zato jsem rád, že jsem nebyl s výjimkou dokumentace v mém
-časovém plánu příliš optimistický. Co můj projekt dále čeká je přidání skutečného typového systému, který zásadně rozšíří schopnosti mého jazyka.
+Kromě toho je prostoru na rozvoj velké množství. Jedním obrovským tématem, kterého jsem se ani nedotkl, jsou optimalizace. Jiným milníkem, od kterého je
+jazyk stále velmi daleko, je OOP. Nejraději bych, aby se jazyk dostal tak daleko, že mohu jeho compiler přepsat v tom samém jazyce, ale to v momentální
+době ještě nevypadá realisticky. Tyto cíle však spadají do daleké budoucnosti a krátkodobě se budu zaměřovat spíše na zvládnutí toho, co jsem si napsal do vedlejších
+cílů a ještě není hotové.
 \end{document}
