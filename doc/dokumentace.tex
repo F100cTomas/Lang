@@ -9,8 +9,14 @@
 \usepackage{geometry}
 \usepackage{graphicx}
 \usepackage{tabularx}
+\usepackage{verbatim}
 \usepackage{minted}
 \usepackage{tikz}
+\usepackage{svg}
+\begin{comment}
+\usepackage[backend=biber,style=iso-numeric]{biblatex}
+\addbibresource{zdroje.bib}
+\end{comment}
 \usepackage{hyperref}
 \geometry{margin=5em}
 \usetikzlibrary{positioning}
@@ -24,7 +30,21 @@
 
 \begin{document}
 
-\maketitle
+\begin{titlepage}
+    \centering
+    {\Huge \textbf{Compiler vlastního programovacího jazyka}\par}
+    \vspace{2cm}
+    {\Large Dokumentace k maturitní práci\par}
+    \vfill
+
+    \includesvg[width=0.4\textwidth]{logo_gp.svg}
+    \vfill
+
+    {\large Ondřej Suk}
+    {\large Gymnázium, Praha 4, Písnická 760\par}
+    {\large \today}
+
+\end{titlepage}
 
 \begin{abstract}
 Práce se zabývá vytvářením jednoduchého compileru programovacího jazyka vytvořeného specificky pro tento projekt za pomoci knihovny LLVM.
@@ -40,17 +60,13 @@ již součástí knihovny LLVM, tudíž se hlavní část projektu zabývá pře
 \clearpage
 
 \chapter{Úvod}
-Cílem projektu bylo vytvořit compiler jednoduchého jazyka, který bude sloužit jako základ mnohem pokročilejšího jazyka, na kterém plánuji
-pracovat po maturitě. Z toho důvodu je celý projekt přizpůsobený mé poněkud netradiční vizi pro syntaxi finálního jazyka. V jazyce tedy není v aktuálním
-stavu snadné programovat a mnoho věcí, které by programátor očekával, chybí. To je v souladu s cílem projektu, protože plně rozsáhlý programovací
-jazyk by potřeboval množství času mnohem vyšší, než je v rámci maturitního projektu možné.
+Jako cíl svého projektu jsem si vymezil tvorbu compileru pro jednoduchý programovací jazyk. Mám v plánu, že na projektu budu pokračovat i po maturitní
+zkoušce, takže chci, aby šel projekt snadno rozšiřovat a příliš mi nezáleží na komfortu uživatele jazyka. To znamená, že mým hlavním cílem je implementace
+základních jazykových konstrukcí, nikoli plnohodnotného jazyka. Mezi věci, které chci implementovat patří smyčky, podmínky, operátory, proměnné, funkce a další.
 
-Projekt jsem naprogramoval v jazyce C++ za použití knihovny LLVM, která je pro compilery populární volbou. Compiler je rozdělen na několik fází, které
-překládají původní kód z jedné reprezentace na druhou. Poslední reprezentací je tedy výsledný spustitelný soubor. Zdrojový kód je modulárně strukturovaný,
-takže jednotlivé fáze kompilace jsou od sebe oddělené. Jednotlivé fáze jsou podrobně popsané v programátorské dokumentaci. Kromě toho programátorská
-dokumentace rozebírá obecnou strukturu projektu. \enquote{Kostra} označuje kód, který nepatří žádné kompilační fázi.
+Následuje programátorská dokumentace. Obsahuje popis obecné struktury projektu a všech systémů, ze kterých se projekt skládá.
 
-Uživatelská dokumentace je méně podrobná, než programátorská. Slouží spíše jako ukázka programů, které jdou v jazyce psát, než jako specifikace.
+Uživatelská dokumentace je méně podrobná než programátorská. Slouží spíše jako ukázka programů, které jdou v jazyce psát, než jako specifikace.
 Jazyk se stále vyvíjí a informace, které by specifikace obsahovala, by nemuseli platit pro novější verze. Uživatelská dokumentace také popisuje
 instalační proces a uživatelské rozhraní.
 
@@ -805,17 +821,19 @@ době ještě nevypadá realisticky. Tyto cíle však spadají do daleké budouc
 vedlejší cíle a ještě není hotové.
 
 \renewcommand{\bibname}{Zdroje}
+% \printbibliography
+% \begin{comment}
 \begin{thebibliography}{9}
 
 \bibitem{lang_repo}
 Ondřej Suk.
 \textit{GitHub repozitář projektu}.
 \url{https://github.com/F100cTomas/Lang}
-
 \bibitem{llvm_tutorial}
 LLVM Project.
 \textit{My First Language Frontend with LLVM Tutorial}.
 \url{https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html}
-
 \end{thebibliography}
+% \end{comment}
+
 \end{document}

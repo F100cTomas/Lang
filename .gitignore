@@ -7,6 +7,8 @@ cppcompiler/program.a
 cppcompiler/program.exe
 cppcompiler/kernel32.lib
 doc/*
-!doc/*.tex
 !doc/*.md
+!doc/*.tex
+!doc/*.bib
 !doc/*.pdf
+!doc/logo_gp.svg
