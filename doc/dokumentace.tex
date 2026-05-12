@@ -13,10 +13,8 @@
 \usepackage{minted}
 \usepackage{tikz}
 \usepackage{svg}
-\begin{comment}
 \usepackage[backend=biber,style=iso-numeric]{biblatex}
 \addbibresource{zdroje.bib}
-\end{comment}
 \usepackage{hyperref}
 \geometry{margin=5em}
 \usetikzlibrary{positioning}
@@ -821,8 +819,8 @@ době ještě nevypadá realisticky. Tyto cíle však spadají do daleké budouc
 vedlejší cíle a ještě není hotové.
 
 \renewcommand{\bibname}{Zdroje}
-% \printbibliography
-% \begin{comment}
+\printbibliography
+\begin{comment}
 \begin{thebibliography}{9}
 
 \bibitem{lang_repo}
@@ -834,6 +832,6 @@ LLVM Project.
 \textit{My First Language Frontend with LLVM Tutorial}.
 \url{https://llvm.org/docs/tutorial/MyFirstLanguageFrontend/index.html}
 \end{thebibliography}
-% \end{comment}
+\end{comment}
 
 \end{document}
