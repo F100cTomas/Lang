@@ -1,15 +1,29 @@
 \documentclass[12pt, a4paper, titlepage]{beamer}
 
-\usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage[czech]{babel}
-\usepackage{cmbright}
+\usepackage[T1]{fontenc}
 \usepackage{microtype}
-
+\usepackage{cmbright}
+\usepackage{csquotes}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{tabularx}
+\usepackage{verbatim}
+\usepackage{minted}
+\usepackage{tikz}
+\usepackage{svg}
 \usetheme{Copenhagen}
 \usecolortheme{beaver}
+\usetikzlibrary{positioning}
+\usetikzlibrary{matrix}
+\setminted{
+    fontsize=\small
+}
+\definecolor{mygreen}{rgb}{0.0, 0.75, 0.0}
+\definecolor{myyellow}{rgb}{0.75, 0.75, 0.0}
 
-\title{Maturnitní Projekt 2026} % přidat jméno
+\title{Compiler vlastního programovacího jazyka}
 \author{Ondřej Suk}
 \date{\today}
 
@@ -17,26 +31,830 @@
 
 \frame{\titlepage}
 
-\begin{frame}{Úvod}
-Co je cílem?
+\begin{frame}{Vstup}
+$$
+\frac{5 \cdot \left(fahrenheit - 32\right)}{9}
+$$
+
 \end{frame}
-\begin{frame}{Jak projekt funguje?}
-Kód $\rightarrow$ Tokenizace $\rightarrow$ Preparser $\rightarrow$ Parser $\rightarrow$ Generátor Kódu $\rightarrow$ LLVM $\rightarrow$ Spustitelný soubor
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}
+\matrix [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[draw=none]|$5 * ( fahrenheit - 32 ) / 9$ \\
+};
+\end{tikzpicture}
 \end{frame}
-\begin{frame}{Tokenizace}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}
+\matrix [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+5 \& |[draw=none]|$*\ ( fahrenheit - 32 ) / 9$ \\
+};
+\end{tikzpicture}
 \end{frame}
-\begin{frame}{Preparser}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}
+\matrix [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+5 \& $*$ \& |[draw=none]|$( fahrenheit - 32 ) / 9$ \\
+};
+\end{tikzpicture}
 \end{frame}
-\begin{frame}{Parser}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}
+\matrix [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+5 \& $*$ \& ( \& |[draw=none]|$fahrenheit - 32 ) / 9$ \\
+};
+\end{tikzpicture}
 \end{frame}
-\begin{frame}{Generátor kódu}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}
+\matrix [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+5 \& $*$ \& ( \& fahrenheit \& |[draw=none]|$- 32 ) / 9$ \\
+};
+\end{tikzpicture}
 \end{frame}
-\begin{frame}{LLVM}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}
+\matrix [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+5 \& $*$ \& ( \& fahrenheit \& $-$ \& |[draw=none]|$32 ) / 9$ \\
+};
+\end{tikzpicture}
 \end{frame}
-\begin{frame}{Závěr}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}
+\matrix [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+5 \& $*$ \& ( \& fahrenheit \& $-$ \& 32 \& |[draw=none]|$) / 9$ \\
+};
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}
+\matrix [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+5 \& $*$ \& ( \& fahrenheit \& $-$ \& 32 \& ) \& |[draw=none]|$/ 9$ \\
+};
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}
+\matrix [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+5 \& $*$ \& ( \& fahrenheit \& $-$ \& 32 \& ) \& / \& |[draw=none]|9 \\
+};
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}
+\matrix [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+5 \& $*$ \& ( \& fahrenheit \& $-$ \& 32 \& ) \& / \& 9 \\
+};
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}[
+value/.style={rectangle, draw=blue!60, fill=blue!5, very thick},
+infix/.style={rectangle, draw=red!60, fill=red!5, very thick},
+]
+\matrix [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[value]|5 \& $*$ \& ( \& fahrenheit \& $-$ \& 32 \& ) \& / \& 9 \\
+};
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}[
+value/.style={rectangle, draw=blue!60, fill=blue!5, very thick},
+infix/.style={rectangle, draw=red!60, fill=red!5, very thick},
+]
+\matrix [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[value]|5 \& |[infix]|$*$ \& ( \& fahrenheit \& $-$ \& 32 \& ) \& / \& 9 \\
+};
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}[
+value/.style={rectangle, draw=blue!60, fill=blue!5, very thick},
+infix/.style={rectangle, draw=red!60, fill=red!5, very thick},
+]
+\matrix (m1) [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[value]|5 \& |[infix]|$*$ \& |[value]|( \& |[draw=none]|\phantom{fahrenheit} \& |[draw=none]|\phantom{$-$} \& |[draw=none]|\phantom{32} \& |[draw=none]|\phantom{)} \& / \& 9 \\
+};
+\matrix (m2) [above=of m1] [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[draw=none]|\phantom{5} \& |[draw=none]|\phantom{$*$} \& |[draw=none]|\phantom{(} \& fahrenheit \& $-$ \& 32 \& |[draw=none]|\phantom{)} \& |[draw=none]|\phantom{/} \& |[draw=none]|\phantom{9} \\
+};
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}[
+value/.style={rectangle, draw=blue!60, fill=blue!5, very thick},
+infix/.style={rectangle, draw=red!60, fill=red!5, very thick},
+]
+\matrix (m1) [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[value]|5 \& |[infix]|$*$ \& |[value]|( \& / \& 9 \\
+};
+\matrix (m2) [above=of m1-1-3] [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+fahrenheit \& $-$ \& 32 \\
+};
+\draw[->, very thick] (m1-1-3) -- (m2);
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}[
+value/.style={rectangle, draw=blue!60, fill=blue!5, very thick},
+infix/.style={rectangle, draw=red!60, fill=red!5, very thick},
+]
+\matrix (m1) [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[value]|5 \& |[infix]|$*$ \& |[value]|( \& / \& 9 \\
+};
+\matrix (m2) [above=of m1-1-3] [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[value]|fahrenheit \& $-$ \& 32 \\
+};
+\draw[->, very thick] (m1-1-3) -- (m2);
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}[
+value/.style={rectangle, draw=blue!60, fill=blue!5, very thick},
+infix/.style={rectangle, draw=red!60, fill=red!5, very thick},
+]
+\matrix (m1) [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[value]|5 \& |[infix]|$*$ \& |[value]|( \& / \& 9 \\
+};
+\matrix (m2) [above=of m1-1-3] [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[value]|fahrenheit \& |[infix]|$-$ \& 32 \\
+};
+\draw[->, very thick] (m1-1-3) -- (m2);
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}[
+value/.style={rectangle, draw=blue!60, fill=blue!5, very thick},
+infix/.style={rectangle, draw=red!60, fill=red!5, very thick},
+]
+\matrix (m1) [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[value]|5 \& |[infix]|$*$ \& |[value]|( \& / \& 9 \\
+};
+\matrix (m2) [above=of m1-1-3] [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[value]|fahrenheit \& |[infix]|$-$ \& |[value]|32 \\
+};
+\draw[->, very thick] (m1-1-3) -- (m2);
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}[
+value/.style={rectangle, draw=blue!60, fill=blue!5, very thick},
+infix/.style={rectangle, draw=red!60, fill=red!5, very thick},
+]
+\matrix (m1) [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[value]|5 \& |[infix]|$*$ \& |[value]|( \& |[infix]|/ \& 9 \\
+};
+\matrix (m2) [above=of m1-1-3] [
+    matrix of nodes,
+    ampersand replacement=\&,
+    nodes={
+        draw,
+        minimum width=5mm,
+        minimum height=5mm,
+        text height=1.5ex,
+        text depth=.25ex
+    },
+    column sep=1mm,
+    row sep=1mm
+] {
+|[value]|fahrenheit \& |[infix]|$-$ \& |[value]|32 \\
+};
+\draw[->, very thick] (m1-1-3) -- (m2);
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}[
+value/.style={rectangle, draw=blue!60, fill=blue!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+infix/.style={rectangle, draw=red!60, fill=red!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+]
+\matrix (m1) [matrix of nodes, ampersand replacement=\&, column sep=1mm, row sep=1mm] {
+|[value]|5 \& |[infix]|$*$ \& |[value]|( \& |[infix]|/ \& |[value]|9 \\
+};
+\matrix (m2) [above=of m1-1-3, matrix of nodes, ampersand replacement=\&, column sep=1mm, row sep=1mm] {
+|[value]|fahrenheit \& |[infix]|$-$ \& |[value]|32 \\
+};
+\draw[->, very thick] (m1-1-3) -- (m2);
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}[
+value/.style={rectangle, draw=blue!60, fill=blue!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+infix/.style={rectangle, draw=red!60, fill=red!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+node/.style={rectangle, draw=mygreen!60, fill=mygreen!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+]
+\matrix (m1) [matrix of nodes, ampersand replacement=\&, column sep=1mm, row sep=1mm] {
+|[value]|5 \& |[infix]|$*$ \& |[value]|( \& |[draw=none]|\phantom{/} \& |[value]|9 \\
+};
+\node[node] (div) [below=of m1-1-4] {/};
+\matrix (m2) [above=of m1-1-3, matrix of nodes, ampersand replacement=\&, column sep=1mm, row sep=1mm] {
+|[value]|fahrenheit \& |[infix]|$-$ \& |[value]|32 \\
+};
+\draw[->, very thick] (m1-1-3) -- (m2);
+\draw[->, very thick] (div) -- (m1-1-2.south);
+\draw[->, very thick] (div) -- (m1-1-5.south);
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}[
+value/.style={rectangle, draw=blue!60, fill=blue!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+infix/.style={rectangle, draw=red!60, fill=red!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+node/.style={rectangle, draw=mygreen!60, fill=mygreen!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+]
+\node[node] (div) {/};
+\matrix (m1) [above=of div, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[node]|$*$ \& |[node]|9 \\
+};
+\matrix (m2) [above=of m1-1-1, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[value]|5 \& |[value]|( \\
+};
+\matrix (m3) [above=of m2-1-2, matrix of nodes, ampersand replacement=\&, column sep=1mm, row sep=1mm] {
+|[value]|fahrenheit \& |[infix]|$-$ \& |[value]|32 \\
+};
+\draw[->, very thick] (div) -- (m1-1-1);
+\draw[->, very thick] (div) -- (m1-1-2);
+\draw[->, very thick] (m1-1-1) -- (m2-1-1);
+\draw[->, very thick] (m1-1-1) -- (m2-1-2);
+\draw[->, very thick] (m2-1-2) -- (m3);
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}[
+value/.style={rectangle, draw=blue!60, fill=blue!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+infix/.style={rectangle, draw=red!60, fill=red!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+node/.style={rectangle, draw=mygreen!60, fill=mygreen!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+]
+\node[node] (div) {/};
+\matrix (m1) [above=of div, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[node]|$*$ \& |[node]|9 \\
+};
+\matrix (m2) [above=of m1-1-1, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[node]|5 \& |[node]|$-$ \\
+};
+\matrix (m3) [above=of m2-1-2, matrix of nodes, ampersand replacement=\&, column sep=1mm, row sep=1mm] {
+|[value]|fahrenheit \& |[draw=none]|\phantom{$-$} \& |[value]|32 \\
+};
+\draw[->, very thick] (div) -- (m1-1-1);
+\draw[->, very thick] (div) -- (m1-1-2);
+\draw[->, very thick] (m1-1-1) -- (m2-1-1);
+\draw[->, very thick] (m1-1-1) -- (m2-1-2);
+\draw[->, very thick] (m2-1-2) -- (m3-1-1);
+\draw[->, very thick] (m2-1-2) -- (m3-1-3.south);
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\centering
+\begin{tikzpicture}[
+node/.style={rectangle, draw=mygreen!60, fill=mygreen!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+]
+\node[node] (div) {/};
+\matrix (m1) [above=of div, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[node]|$*$ \& |[node]|9 \\
+};
+\matrix (m2) [above=of m1-1-1, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[node]|5 \& |[node]|$-$ \\
+};
+\matrix (m3) [above=of m2-1-2, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[node]|fahrenheit \&  |[node]|32 \\
+};
+\draw[->, very thick] (div) -- (m1-1-1);
+\draw[->, very thick] (div) -- (m1-1-2);
+\draw[->, very thick] (m1-1-1) -- (m2-1-1);
+\draw[->, very thick] (m1-1-1) -- (m2-1-2);
+\draw[->, very thick] (m2-1-2) -- (m3-1-1);
+\draw[->, very thick] (m2-1-2) -- (m3-1-2);
+\end{tikzpicture}
+\end{frame}
+\begin{frame}{Vstup}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.6\textwidth}
+\scriptsize
+\texttt{\textcolor{red}{\%0 = load i64, ptr \%fahrenheit, align 8}}
+\end{column}
+\begin{column}{0.4\textwidth}
+\begin{tikzpicture}[
+node/.style={rectangle, draw=mygreen!60, fill=mygreen!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+selected/.style={rectangle, draw=myyellow!60, fill=myyellow!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+current/.style={rectangle, draw=red!60, fill=red!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+]
+\node[selected] (div) {/};
+\matrix (m1) [above=of div, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[selected]|$*$ \& |[node]|9 \\
+};
+\matrix (m2) [above=of m1-1-1, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[selected]|5 \& |[selected]|$-$ \\
+};
+\matrix (m3) [above=of m2-1-2, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[current]|fahrenheit \&  |[node]|32 \\
+};
+\draw[-, very thick] (div) -- (m1-1-1);
+\draw[->, very thick] (div) -- (m1-1-2);
+\draw[-, very thick] (m1-1-1) -- (m2-1-1);
+\draw[-, very thick] (m1-1-1) -- (m2-1-2);
+\draw[-, very thick] (m2-1-2) -- (m3-1-1);
+\draw[->, very thick] (m2-1-2) -- (m3-1-2);
+\end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+\begin{frame}{Vstup}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.6\textwidth}
+\scriptsize
+\texttt{\%0 = load i64, ptr \%fahrenheit, align 8 \\
+\textcolor{red}{\%1 = sub i64 \%0, 32}
+}
+\end{column}
+\begin{column}{0.4\textwidth}
+\begin{tikzpicture}[
+node/.style={rectangle, draw=mygreen!60, fill=mygreen!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+selected/.style={rectangle, draw=myyellow!60, fill=myyellow!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+current/.style={rectangle, draw=red!60, fill=red!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+]
+\node[selected] (div) {/};
+\matrix (m1) [above=of div, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[selected]|$*$ \& |[node]|9 \\
+};
+\matrix (m2) [above=of m1-1-1, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[selected]|5 \& |[current]|$-$ \\
+};
+\matrix (m3) [above=of m2-1-2, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[selected]|fahrenheit \&  |[selected]|32 \\
+};
+\draw[-, very thick] (div) -- (m1-1-1);
+\draw[->, very thick] (div) -- (m1-1-2);
+\draw[-, very thick] (m1-1-1) -- (m2-1-1);
+\draw[-, very thick] (m1-1-1) -- (m2-1-2);
+\draw[-, very thick] (m2-1-2) -- (m3-1-1);
+\draw[-, very thick] (m2-1-2) -- (m3-1-2);
+\end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+\begin{frame}{Vstup}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.6\textwidth}
+\scriptsize
+
+\texttt{\%0 = load i64, ptr \%fahrenheit, align 8 \\
+\%1 = sub i64 \%0, 32 \\
+\textcolor{red}{\%2 = mul i64 5, \%1}
+}
+\end{column}
+\begin{column}{0.4\textwidth}
+\begin{tikzpicture}[
+node/.style={rectangle, draw=mygreen!60, fill=mygreen!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+selected/.style={rectangle, draw=myyellow!60, fill=myyellow!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+current/.style={rectangle, draw=red!60, fill=red!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+]
+\node[selected] (div) {/};
+\matrix (m1) [above=of div, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[current]|$*$ \& |[node]|9 \\
+};
+\matrix (m2) [above=of m1-1-1, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[selected]|5 \& |[selected]|$-$ \\
+};
+\matrix (m3) [above=of m2-1-2, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[selected]|fahrenheit \&  |[selected]|32 \\
+};
+\draw[-, very thick] (div) -- (m1-1-1);
+\draw[->, very thick] (div) -- (m1-1-2);
+\draw[-, very thick] (m1-1-1) -- (m2-1-1);
+\draw[-, very thick] (m1-1-1) -- (m2-1-2);
+\draw[-, very thick] (m2-1-2) -- (m3-1-1);
+\draw[-, very thick] (m2-1-2) -- (m3-1-2);
+\end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+\begin{frame}{Vstup}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.6\textwidth}
+\scriptsize
+
+\texttt{\%0 = load i64, ptr \%fahrenheit, align 8 \\
+\%1 = sub i64 \%0, 32 \\
+\%2 = mul i64 5, \%1 \\
+\textcolor{red}{\%3 = sdiv i64 \%2, 9}
+}
+\end{column}
+\begin{column}{0.4\textwidth}
+\begin{tikzpicture}[
+node/.style={rectangle, draw=mygreen!60, fill=mygreen!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+selected/.style={rectangle, draw=myyellow!60, fill=myyellow!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+current/.style={rectangle, draw=red!60, fill=red!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+]
+\node[current] (div) {/};
+\matrix (m1) [above=of div, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[selected]|$*$ \& |[selected]|9 \\
+};
+\matrix (m2) [above=of m1-1-1, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[selected]|5 \& |[selected]|$-$ \\
+};
+\matrix (m3) [above=of m2-1-2, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[selected]|fahrenheit \&  |[selected]|32 \\
+};
+\draw[-, very thick] (div) -- (m1-1-1);
+\draw[-, very thick] (div) -- (m1-1-2);
+\draw[-, very thick] (m1-1-1) -- (m2-1-1);
+\draw[-, very thick] (m1-1-1) -- (m2-1-2);
+\draw[-, very thick] (m2-1-2) -- (m3-1-1);
+\draw[-, very thick] (m2-1-2) -- (m3-1-2);
+\end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+\begin{frame}{Vstup}
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.6\textwidth}
+\scriptsize
+
+\texttt{\%0 = load i64, ptr \%fahrenheit, align 8 \\
+\%1 = sub i64 \%0, 32 \\
+\%2 = mul i64 5, \%1 \\
+\%3 = sdiv i64 \%2, 9
+}
+\end{column}
+\begin{column}{0.4\textwidth}
+\begin{tikzpicture}[
+node/.style={rectangle, draw=mygreen!60, fill=mygreen!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+selected/.style={rectangle, draw=myyellow!60, fill=myyellow!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+current/.style={rectangle, draw=red!60, fill=red!5, very thick, minimum size=5mm, text height=1.5ex, text depth=.25ex},
+]
+\node[selected] (div) {/};
+\matrix (m1) [above=of div, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[selected]|$*$ \& |[selected]|9 \\
+};
+\matrix (m2) [above=of m1-1-1, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[selected]|5 \& |[selected]|$-$ \\
+};
+\matrix (m3) [above=of m2-1-2, matrix of nodes, ampersand replacement=\&, column sep=10mm, row sep=1mm] {
+|[selected]|fahrenheit \&  |[selected]|32 \\
+};
+\draw[-, very thick] (div) -- (m1-1-1);
+\draw[-, very thick] (div) -- (m1-1-2);
+\draw[-, very thick] (m1-1-1) -- (m2-1-1);
+\draw[-, very thick] (m1-1-1) -- (m2-1-2);
+\draw[-, very thick] (m2-1-2) -- (m3-1-1);
+\draw[-, very thick] (m2-1-2) -- (m3-1-2);
+\end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+\begin{frame}[fragile]{Vstup}
+\begin{listing}[H]
+\begin{minted}{LLVM}
+%0 = load i64, ptr %fahrenheit, align 8
+%1 = sub i64 %0, 32
+%2 = mul i64 5, %1
+%3 = sdiv i64 %2, 9
+\end{minted}
+\end{listing}
+\end{frame}
+\begin{frame}[fragile]{Vstup}
+\begin{listing}[H]
+\begin{minted}{gas}
+    leaq    (%rdi,%rdi,4), %rax
+    addq    $-160, %rax
+    movabsq $2049638230412172402, %rcx
+    imulq   %rcx
+    movq    %rdx, %rax
+    shrq    $63, %rax
+    addq    %rdx, %rax
+\end{minted}
+\end{listing}
+\end{frame}
+\begin{frame}[plain]
+  \centering\Huge Ukázka
+\end{frame}
+\begin{frame}[plain]
+\begin{tikzpicture}[remember picture,overlay]
+    \node at (current page.center) {
+        \includegraphics[
+            width=\paperwidth,
+            height=\paperheight
+        ]{cat_code.png}
+    };
+\end{tikzpicture}
+\end{frame}
+\begin{frame}[plain]
+\begin{tikzpicture}[remember picture,overlay]
+    \node at (current page.center) {
+        \includegraphics[
+            width=\paperwidth,
+            height=\paperheight
+        ]{program.png}
+    };
+\end{tikzpicture}
+\end{frame}
+\begin{frame}[plain]
+\begin{tikzpicture}[remember picture,overlay]
+    \node at (current page.center) {
+        \includegraphics[
+            width=\paperwidth,
+            height=\paperheight
+        ]{help.png}
+    };
+\end{tikzpicture}
 \end{frame}
 \begin{frame}[plain]
   \centering\Huge Děkuji za pozornost!
 \end{frame}
-
 \end{document}
